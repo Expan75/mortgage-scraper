@@ -12,7 +12,7 @@ from src.base_sink import AbstractSink
 from src.base_scraper import AbstractScraper
 
 
-log = logging.getLogger(__file__)
+log = logging.getLogger(__name__)
 
 
 
@@ -110,9 +110,16 @@ class IcaBankenScraper(AbstractScraper):
         log.info("Starting IcaScraper...")
         
         urls = self.generate_scrape_urls()
-        responses = [self.scrape_url(url) for url in urls]
+        responses = []
+        for i, url in enumerate(urls):
+            response = self.scrape_url(url)
+            responses.append(response)
 
-        print(responses[0])
+            if i % 100 == 0:
+                log.info(f"completed {i} of {len(urls)} ica scrapes")
+
+        responses = [self.scrape_url(url) for url in urls]
+        log.info(f"successfully uncpacked {len(responses)}")
         export_df = pd.DataFrame.from_records(asdict(response) for response in responses)
 
         log.info(f"Successfully scraped {len(export_df)}")
