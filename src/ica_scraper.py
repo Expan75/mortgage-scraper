@@ -110,7 +110,7 @@ class IcaBankenScraper(AbstractScraper):
         log.info("Starting IcaScraper...")
         
         urls = self.generate_scrape_urls()
-        responses = [self.scrape_url(url) for url in urls[:5]]
+        responses = [self.scrape_url(url) for url in urls]
 
         print(responses[0])
         export_df = pd.DataFrame.from_records(asdict(response) for response in responses)
