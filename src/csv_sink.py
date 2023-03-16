@@ -23,7 +23,7 @@ class CSVSink(AbstractSink):
         df.to_csv(filepath)
 
     def get_export_filepath(self) -> str:
-        return os.path.join(self.data_dir, self.get_timestamped.filename())
+        return os.path.join(self.data_dir, self.get_timestamped_filename())
 
     def get_timestamped_filename(self) -> str:
         return "competetitor_mortgage_pricing_" + self.utc_timestamp() + ".csv"

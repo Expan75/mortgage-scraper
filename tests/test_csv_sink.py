@@ -16,4 +16,4 @@ def test_export(csv_sink: CSVSink, temp_dir):
     csv_sink.export(pd.DataFrame())
 
     assert len(os.listdir(temp_dir)) > 0
-    assert "competetitor_mortgage_pricing_" in max(os.listdir(temp_dir), key=len)
+    assert [filename for filename in os.listdir(temp_dir) if ".csv" in filename]

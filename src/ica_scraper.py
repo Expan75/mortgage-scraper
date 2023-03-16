@@ -6,7 +6,7 @@ import pandas as pd
 import urllib.request
 from typing import Dict, List, Tuple
 from itertools import combinations, product
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 
 from src.base_sink import AbstractSink
 from src.base_scraper import AbstractScraper
@@ -110,16 +110,16 @@ class IcaBankenScraper(AbstractScraper):
         log.info("Starting IcaScraper...")
         
         urls = self.generate_scrape_urls()
-        responses = [self.scrape_url(url) for url in urls]
+        responses = [self.scrape_url(url) for url in urls[:5]]
 
         print(responses[0])
-        export_df = pd.DataFrame.from_records(response.asdict() for response in responses)
+        export_df = pd.DataFrame.from_records(asdict(response) for response in responses)
 
         log.info(f"Successfully scraped {len(export_df)}")
         log.info("exporting to", self.sinks)
 
         for s in self.sinks:
-            log.info("exporting to %s", s)
+            log.info(f"exporting to {s}")
             s.export(export_df)
 
     def __str__(self):
