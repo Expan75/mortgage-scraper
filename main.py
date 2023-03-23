@@ -62,9 +62,12 @@ def main():
 
     # parse
     targets, sinks, debug = cli().values()
+    
+    max_urls = float("inf")
 
     if debug:
         logging.basicConfig(level=logging.DEBUG)
+        max_urls = 10
 
     # intialise
     initalised_sinks = setup_sinks(selected_sinks=sinks)
@@ -73,10 +76,10 @@ def main():
     # run and log
     log.info(f"Selected data sinks: {initalised_sinks}")
     log.info(f"Selected scraping targets: {initalised_scrapers}")
-    log.info("Beging scraping job...")
+    log.info("Beginning scraping job...")
 
     for scraper in initalised_scrapers:
-        scraper.run_scraping_job()
+        scraper.run_scraping_job(max_urls)
 
     log.info("Completed jobs, exiting...")
     return True

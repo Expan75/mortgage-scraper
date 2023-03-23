@@ -31,7 +31,7 @@ class HypoteketResponse:
 class HypoteketScraper(AbstractScraper):
     """Scraper for https://api.hypoteket.com"""
 
-    url_parameters: Dict[int, List[Tuple[int, int]]] = None
+    url_parameters: List[Tuple[int, int]] = None
     base_url = "https://api.hypoteket.com/api/v1"
 
     def __init__(self, sinks: List[AbstractSink], *args, **kwargs):
@@ -60,10 +60,12 @@ class HypoteketScraper(AbstractScraper):
     def get_scrape_url(self, loan_amount: int, estate_value: int) -> str:
         return f"""{self.base_url + f'/loans/interestRates?propertyValue={estate_value}&loanSize={loan_amount}'}"""
 
-    def run_scraping_job(self):
+    def run_scraping_job(self, max_urls: int):
         """Manages the actual scraping job, exporting to each sink and so on"""
         
         urls = self.generate_scrape_urls()
+        if max_urls < float("inf"):
+            urls = urls[:max_urls]
         log.info(f"scraping {len(urls)} urls...")
         
         requests = (grequests.get(url) for url in urls)

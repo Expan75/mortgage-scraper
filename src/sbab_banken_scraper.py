@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 @dataclass
 class SBABResponse:
     """Response payload following successful API call"""
-    loptidText: str
+    LoptidText: str
     Rantesats: float
     Rantebindningstid: int
     EffektivRantesats: float
@@ -55,10 +55,13 @@ class SBABScraper(AbstractScraper):
     def get_scrape_url(self, loan_amount: int, estate_value: int) -> str:
         return self.base_url + f'/resources/rantor/bolan/hamtaprisdiffaderantor/{loan_amount}/{estate_value}'
 
-    def run_scraping_job(self):
+    def run_scraping_job(self, max_urls: int):
         """Manages the actual scraping job, exporting to each sink and so on"""
         
         urls = self.generate_scrape_urls()
+        if max_urls < float("inf"):
+            urls = urls[:max_urls]
+
         log.info(f"scraping {len(urls)} urls...")
         
         requests = (grequests.get(url) for url in urls)

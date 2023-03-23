@@ -92,7 +92,7 @@ class IcaBankenScraper(AbstractScraper):
 
     def get_auth_header(self) -> str:
         """Util for defining valid auth header"""
-        return f"Authorization: Bearer {self.access_token.access_token}"
+        return {"Authorization": f"Bearer {self.access_token.access_token}"}
 
     def scrape_url(self, url: str) -> IcaBankenResponse:
         """Scrapes the json off of the provided url"""
@@ -104,18 +104,25 @@ class IcaBankenScraper(AbstractScraper):
             data = json.load(response)["response"]
             return IcaBankenResponse(**data)
 
-    def run_scraping_job(self):
+    def run_scraping_job(self, max_urls: int):
         """Manages the actual scraping job, exporting to each sink and so on"""
-        
         urls = self.generate_scrape_urls()
+        if max_urls < float("inf"):
+            urls = urls[:max_urls]
         log.info(f"scraping {len(urls)} urls...")
         
-        requests = (grequests.get(url) for url in urls)
+        header = self.get_auth_header()
+        requests = (grequests.get(url, header=header) for url in urls)
         responses = grequests.map(requests)        
         serialized_data = []
 
         for i, response in enumerate(responses):
-            serialized_data.append(IcaBankenResponse(**response))
+            print(response)
+            if response.status_code == 200:
+                parsed_response = json.loads(response.text)
+                print(parsed_response)
+                for data in parsed_response:
+                    serialized_data.append(IcaBankenResponse(**data))
 
             if i % 100 == 0:
                 log.info(f"completed {i} of {len(urls)} scrapes")
