@@ -1,10 +1,13 @@
+import ssl
 import json
 import logging
-import grequests
 import pandas as pd
 from itertools import product
 from typing import Dict, List, Tuple
 from dataclasses import dataclass, asdict
+
+import aiohttp
+import asyncio
 
 from src.base_sink import AbstractSink
 from src.base_scraper import AbstractScraper
@@ -37,8 +40,8 @@ class SBABScraper(AbstractScraper):
         Generates a request parameter matrix for generating URLs
         """
 
-        loan_amount_bins = [50_000 * i for i in range(1,201)] # min 100k max 10 mil.
-        asset_value_bins = [50_000 * i for i in range(1,201)] # min 100k max 10 mil.
+        loan_amount_bins = [50_000 * i for i in range(1,201)] # min 50k max 10 mil.
+        asset_value_bins = [50_000 * i for i in range(1,201)] # min 50k max 10 mil.
         parameter_matrix = product(loan_amount_bins, asset_value_bins)
 
         return parameter_matrix
@@ -54,6 +57,15 @@ class SBABScraper(AbstractScraper):
     
     def get_scrape_url(self, loan_amount: int, estate_value: int) -> str:
         return self.base_url + f'/resources/rantor/bolan/hamtaprisdiffaderantor/{loan_amount}/{estate_value}'
+    
+    async def fetch(self, session, url) -> dict:
+        async with session.get(url) as response:
+            return await response.json()
+    
+    async def fetch_urls(self, urls, event_loop):
+        async with aiohttp.ClientSession(loop=event_loop) as session:
+            results = await asyncio.gather(*[self.fetch(session, url) for url in urls], return_exceptions=True)
+            return results
 
     def run_scraping_job(self, max_urls: int):
         """Manages the actual scraping job, exporting to each sink and so on"""
@@ -64,13 +76,12 @@ class SBABScraper(AbstractScraper):
 
         log.info(f"scraping {len(urls)} urls...")
         
-        requests = (grequests.get(url) for url in urls)
-        responses = grequests.map(requests)
+        loop = asyncio.get_event_loop()
+        responses = loop.run_until_complete(self.fetch_urls(urls, loop))
         serialized_data = []
 
         for i, response in enumerate(responses):
-            parsed_response = json.loads(response.text)
-            for data in parsed_response:
+            for data in response:
                 serialized_data.append(SBABResponse(**data))
             
             if i % 100 == 0:

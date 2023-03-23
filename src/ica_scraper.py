@@ -1,11 +1,13 @@
 import json
 import logging
 import pandas as pd
-import grequests
 import urllib.request
 from typing import Dict, List, Tuple
 from itertools import product
 from dataclasses import dataclass, asdict
+
+import aiohttp
+import asyncio
 
 from src.base_sink import AbstractSink
 from src.base_scraper import AbstractScraper
@@ -103,6 +105,15 @@ class IcaBankenScraper(AbstractScraper):
         with urllib.request.urlopen(request) as response:
             data = json.load(response)["response"]
             return IcaBankenResponse(**data)
+        
+    async def fetch(self, session, url) -> IcaBankenResponse:
+        async with session.get(url, headers=self.get_auth_header()) as response:
+            return await response.json()
+    
+    async def fetch_urls(self, urls, event_loop):
+        async with aiohttp.ClientSession(loop=event_loop) as session:
+            results = await asyncio.gather(*[self.fetch(session, url) for url in urls], return_exceptions=True)
+            return results
 
     def run_scraping_job(self, max_urls: int):
         """Manages the actual scraping job, exporting to each sink and so on"""
@@ -111,19 +122,12 @@ class IcaBankenScraper(AbstractScraper):
             urls = urls[:max_urls]
         log.info(f"scraping {len(urls)} urls...")
         
-        header = self.get_auth_header()
-        requests = (grequests.get(url, header=header) for url in urls)
-        responses = grequests.map(requests)        
+        loop = asyncio.get_event_loop()
+        responses = loop.run_until_complete(self.fetch_urls(urls, loop))
         serialized_data = []
-
+        
         for i, response in enumerate(responses):
-            print(response)
-            if response.status_code == 200:
-                parsed_response = json.loads(response.text)
-                print(parsed_response)
-                for data in parsed_response:
-                    serialized_data.append(IcaBankenResponse(**data))
-
+            serialized_data.append(IcaBankenResponse(**response["response"]))
             if i % 100 == 0:
                 log.info(f"completed {i} of {len(urls)} scrapes")
 
@@ -132,7 +136,7 @@ class IcaBankenScraper(AbstractScraper):
         export_df.name = "ica"
 
         log.info(f"Successfully scraped {len(export_df)}")
-        log.info("exporting to", self.sinks)
+        log.info(f"exporting {self.sinks}")
 
         for s in self.sinks:
             log.info(f"exporting to {s}")

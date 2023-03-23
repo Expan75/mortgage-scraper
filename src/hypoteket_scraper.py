@@ -1,17 +1,18 @@
-import json
 import logging
 import datetime
-import grequests
 import pandas as pd
 from itertools import product
 from typing import Dict, List, Tuple
 from dataclasses import dataclass, asdict
+
+import requests
 
 from src.base_sink import AbstractSink
 from src.base_scraper import AbstractScraper
 
 
 log = logging.getLogger(__name__)
+
 
 
 @dataclass
@@ -67,17 +68,14 @@ class HypoteketScraper(AbstractScraper):
         if max_urls < float("inf"):
             urls = urls[:max_urls]
         log.info(f"scraping {len(urls)} urls...")
-        
-        requests = (grequests.get(url) for url in urls)
-        responses = grequests.map(requests)
-        serialized_data = []
 
+        # given aggresive rate-limiting, defer to synchronous requests
+        responses = [requests.get(url).json() for url in urls]
+        serialized_data = []
+        
         for i, response in enumerate(responses):
-            parsed_response = json.loads(response.text)
-            if response.status_code == 200:
-                for data in parsed_response:
-                    serialized_data.append(HypoteketResponse(**data))
-            
+            for data in response: 
+                serialized_data.append(HypoteketResponse(**data))
             if i % 100 == 0:
                 log.info(f"completed {i} of {len(urls)} scrapes")
     
