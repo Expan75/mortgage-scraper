@@ -1,11 +1,10 @@
-import os
 import json
 import logging
-import numpy as np
 import pandas as pd
+import grequests
 import urllib.request
 from typing import Dict, List, Tuple
-from itertools import combinations, product
+from itertools import product
 from dataclasses import dataclass, asdict
 
 from src.base_sink import AbstractSink
@@ -82,7 +81,7 @@ class IcaBankenScraper(AbstractScraper):
 
     def get_access_token(self) -> AccessToken:
         """Retrieves an access token to be used for auth against api"""
-        url = os.path.join(self.base_url, "token/public")
+        url = self.base_url + "/token/public"
         with urllib.request.urlopen(url) as response:
             data = json.load(response)
         return AccessToken(**data)
@@ -107,20 +106,23 @@ class IcaBankenScraper(AbstractScraper):
 
     def run_scraping_job(self):
         """Manages the actual scraping job, exporting to each sink and so on"""
-        log.info("Starting IcaScraper...")
         
         urls = self.generate_scrape_urls()
-        responses = []
-        for i, url in enumerate(urls):
-            response = self.scrape_url(url)
-            responses.append(response)
+        log.info(f"scraping {len(urls)} urls...")
+        
+        requests = (grequests.get(url) for url in urls)
+        responses = grequests.map(requests)        
+        serialized_data = []
+
+        for i, response in enumerate(responses):
+            serialized_data.append(IcaBankenResponse(**response))
 
             if i % 100 == 0:
-                log.info(f"completed {i} of {len(urls)} ica scrapes")
+                log.info(f"completed {i} of {len(urls)} scrapes")
 
-        responses = [self.scrape_url(url) for url in urls]
         log.info(f"successfully uncpacked {len(responses)}")
-        export_df = pd.DataFrame.from_records(asdict(response) for response in responses)
+        export_df = pd.DataFrame.from_records(asdict(data) for data in serialized_data)
+        export_df.name = "ica"
 
         log.info(f"Successfully scraped {len(export_df)}")
         log.info("exporting to", self.sinks)

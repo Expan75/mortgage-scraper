@@ -1,4 +1,3 @@
-import sys
 import logging
 import argparse
 from typing import List, Tuple, Dict
@@ -7,17 +6,22 @@ from src.base_sink import AbstractSink
 from src.base_scraper import AbstractScraper
 from src.csv_sink import CSVSink
 from src.ica_scraper import IcaBankenScraper
+from src.hypoteket_scraper import HypoteketScraper
+from src.sbab_banken_scraper import SBABScraper
 
 
 log = logging.getLogger(__file__)
 logging.basicConfig(level=logging.INFO)
+
 
 IMPLEMENTED_SINKS = {
     "csv": CSVSink,
 }
 
 IMPLEMENTED_SCRAPERS = {
+    "sbab": SBABScraper,
     "ica": IcaBankenScraper,
+    "hypoteket": HypoteketScraper,
 }
 
 
