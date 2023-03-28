@@ -8,6 +8,7 @@ from src.csv_sink import CSVSink
 from src.ica_scraper import IcaBankenScraper
 from src.hypoteket_scraper import HypoteketScraper
 from src.sbab_banken_scraper import SBABScraper
+from src.skandia_scraper import SkandiaBankenScraper
 
 
 log = logging.getLogger(__file__)
@@ -22,6 +23,7 @@ IMPLEMENTED_SCRAPERS = {
     "sbab": SBABScraper,
     "ica": IcaBankenScraper,
     "hypoteket": HypoteketScraper,
+    "skandia": SkandiaBankenScraper,
 }
 
 

@@ -23,7 +23,16 @@ class RateListEntry:
     """Represents high level mortgage rate listed on /mortgage"""
     id: str # e.g. '3;4,41' # probably internal reference of some sort
     text: str # "Ordinarie ränta (1 år): 5,19%"
-    
+
+
+@dataclass
+class RequestBody:
+    # available at request formation
+    bindingPeriod: int
+    housingInterest: float
+    loanVolume: float
+    price: float    
+
 
 @dataclass
 class SkandiaBankenResponse:
@@ -39,6 +48,12 @@ class SkandiaBankenResponse:
     MonthlyInterestCost: float
     MonthlyInterestTaxDeduction: float
     AdditonalDiscounts: dict
+
+    # available at request formation
+    bindingPeriod: int
+    housingInterest: float
+    loanVolume: int
+    price: int
 
 
 class SkandiaBankenScraper(AbstractScraper):
@@ -66,14 +81,19 @@ class SkandiaBankenScraper(AbstractScraper):
             rate_list_entry.id: combinations_of_bins for rate_list_entry in housing_interest
         }
 
-    def generate_scrape_body(self) -> dict:
+    def generate_scrape_body(
+            self, 
+            period: int, 
+            housing_interest: float, 
+            loan_volume: int,
+            price: int
+        ) -> RequestBody:
         """As this API requires POSTs we opt for bodies instead of url parameters""" 
-        return {}
+        return RequestBody(period, housing_interest, loan_volume, price)
 
-    def generate_scrape_bodies(self) -> List[dict]:
+    def generate_scrape_bodies(self) -> List[RequestBody]:
         """As this API requires POSTs we opt for bodies instead of url parameters"""
         bodies = []
-
         for key in self.parameter_matrix:
             bindingPeriod, housingInterest = key.strip().split(";")
             for loan_amount, asset_amount in self.parameter_matrix[key]:
@@ -81,30 +101,25 @@ class SkandiaBankenScraper(AbstractScraper):
                 bodies.append(body)
 
         return bodies
-        
-    async def fetch(self, session, url, body) -> SkandiaBankenResponse:
-        async with session.post(url, data=body) as response:
-            return await response.json()
-    
-    async def fetch_urls(self, urls, bodies, event_loop):
-        async with aiohttp.ClientSession(loop=event_loop) as session:
-            results = await asyncio.gather(*[self.fetch(session, url, body) for url, body in zip(urls, bodies)], return_exceptions=True)
-            return results
 
     def run_scraping_job(self, max_urls: int):
         """Manages the actual scraping job, exporting to each sink and so on"""
-        bodies = self.generate_scrape_bodies()
-        urls = ["https://www.skandia.se/papi/mortgage/v2.0/discounts" for b in bodies]
+        bodies = self.generate_scrape_bodies() # params here
+        urls = ["https://www.skandia.se/papi/mortgage/v2.0/discounts" for _ in bodies] 
+        
         if max_urls < float("inf"):
             urls = urls[:max_urls]
         log.info(f"scraping {len(urls)} urls...")
         
-        loop = asyncio.get_event_loop()
-        responses = loop.run_until_complete(self.fetch_urls(urls, bodies, loop))
+        responses = [requests.post(url, data=asdict(body)) for url, body in zip(urls, bodies)]
         serialized_data = []
         
-        for i, response in enumerate(responses):
-            serialized_data.append(SkandiaBankenResponse(**response["response"]))
+        for i, (response, parameters) in enumerate(zip(responses, bodies)):
+            print(response.status_code, response.text)
+            
+            serialized_data.append(
+                SkandiaBankenResponse(**response.json(), **asdict(parameters))
+            )
             if i % 100 == 0:
                 log.info(f"completed {i} of {len(urls)} scrapes")
 

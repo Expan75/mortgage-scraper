@@ -17,9 +17,9 @@ class CSVSink(AbstractSink):
 
     data_dir = str(pathlib.Path(os.path.dirname(os.path.realpath(__file__))).parent.resolve()) + "/data"
 
-    def export(self, df: pd.DataFrame):
+    def export(self, df: pd.DataFrame, name: str):
         """Expects a named df"""
-        filepath = self.get_export_filepath(name=df.name)
+        filepath = self.get_export_filepath(name)
         log.info("saving to %s", filepath)
         df.to_csv(filepath)
 

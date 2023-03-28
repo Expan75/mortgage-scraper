@@ -14,7 +14,6 @@ from src.base_scraper import AbstractScraper
 log = logging.getLogger(__name__)
 
 
-
 @dataclass
 class HypoteketResponse:
     """Response payload following successful API call"""
@@ -45,7 +44,7 @@ class HypoteketScraper(AbstractScraper):
         """
         loan_amount_bins = [100_000 * i for i in range(1,101)] # min 100k max 10 mil.
         asset_value_bins = [100_000 * i for i in range(1,101)] # min 100k max 10 mil.
-        parameter_matrix = product(loan_amount_bins, asset_value_bins)
+        parameter_matrix = list(product(loan_amount_bins, asset_value_bins))
 
         return parameter_matrix
 
