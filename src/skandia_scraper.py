@@ -59,6 +59,7 @@ class SkandiaBankenResponse:
 class SkandiaBankenScraper(AbstractScraper):
     """Scraper for https://www.skandia.se/epi-api"""
 
+    provider = "skandia"
     url_parameters: Dict[int, List[Tuple[int, int]]] = None
     base_url = "https://www.skandia.se/epi-api"
 
@@ -106,17 +107,15 @@ class SkandiaBankenScraper(AbstractScraper):
         """Manages the actual scraping job, exporting to each sink and so on"""
         bodies = self.generate_scrape_bodies() # params here
         urls = ["https://www.skandia.se/papi/mortgage/v2.0/discounts" for _ in bodies] 
-        
         if max_urls < float("inf"):
             urls = urls[:max_urls]
-        log.info(f"scraping {len(urls)} urls...")
         
-        responses = [requests.post(url, data=asdict(body)) for url, body in zip(urls, bodies)]
+        log.info(f"scraping {len(urls)} urls...")
+        headers =  { "Content-Type": "application/json" }
+        responses = [requests.post(url, data=asdict(body), headers=headers) for url, body in zip(urls, bodies)]
         serialized_data = []
         
-        for i, (response, parameters) in enumerate(zip(responses, bodies)):
-            print(response.status_code, response.text)
-            
+        for i, (response, parameters) in enumerate(zip(responses, bodies)):            
             serialized_data.append(
                 SkandiaBankenResponse(**response.json(), **asdict(parameters))
             )
@@ -125,14 +124,12 @@ class SkandiaBankenScraper(AbstractScraper):
 
         log.info(f"successfully uncpacked {len(responses)}")
         export_df = pd.DataFrame.from_records(asdict(data) for data in serialized_data)
-        export_df.name = "SkandiaBankenScraper"
-
         log.info(f"Successfully scraped {len(export_df)}")
         log.info(f"exporting {self.sinks}")
 
         for s in self.sinks:
             log.info(f"exporting to {s}")
-            s.export(export_df)
+            s.export(export_df, self.provider)
 
     def __str__(self):
         return "SkandiaBankenScraper"
