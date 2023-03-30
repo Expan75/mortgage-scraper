@@ -1,14 +1,9 @@
-import json
 import logging
 import pandas as pd
-import urllib.request
+import requests
 from typing import Dict, List, Tuple
 from itertools import product
 from dataclasses import dataclass, asdict
-
-import requests
-import aiohttp
-import asyncio
 
 from src.base_sink import AbstractSink
 from src.base_scraper import AbstractScraper
