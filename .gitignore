@@ -9,9 +9,6 @@ data/
 # C extensions
 *.so
 
-# notebooks
-*.ipynb
-
 # Distribution / packaging
 .Python
 build/
