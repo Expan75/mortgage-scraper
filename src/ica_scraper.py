@@ -123,7 +123,7 @@ class IcaBankenScraper(AbstractScraper):
         
     async def fetch(self, session, url) -> IcaBankenResponse:
         async with session.get(url, headers=self.get_auth_header()) as response:
-            return await response.json()
+            return response.json()
     
     async def fetch_urls(self, urls, event_loop):
         async with aiohttp.ClientSession(loop=event_loop) as session:
