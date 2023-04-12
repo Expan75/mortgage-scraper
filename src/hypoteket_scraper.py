@@ -31,6 +31,7 @@ class HypoteketResponse:
 class HypoteketScraper(AbstractScraper):
     """Scraper for https://api.hypoteket.com"""
 
+    provider = "hypoteket"
     url_parameters: List[Tuple[int, int]] = None
     base_url = "https://api.hypoteket.com/api/v1"
 
@@ -69,14 +70,24 @@ class HypoteketScraper(AbstractScraper):
         log.info(f"scraping {len(urls)} urls...")
 
         # given aggresive rate-limiting, defer to synchronous requests
-        responses = [requests.get(url).json() for url in urls]
-        serialized_data = []
-        
-        for i, response in enumerate(responses):
-            for data in response: 
-                serialized_data.append(HypoteketResponse(**data))
+        headers = {"Content-Type": "application/json"}
+        responses = []
+        for i, url in enumerate(urls):
+            res = requests.get(url, headers=headers)
+            responses.append(res)
+
+            if res.status_code != 200:
+                log.critical(f"Hypoteket requests yield {res.status_code}")
+
             if i % 100 == 0:
                 log.info(f"completed {i} of {len(urls)} scrapes")
+
+        serialized_data = []
+
+        for response in responses:
+            # resource expoesd like /<plural> resource and get multiple
+            parsed_response = response.json()
+            serialized_data.extend([HypoteketResponse(**e) for e in parsed_response])
     
         log.info(f"successfully uncpacked {len(urls)} requests")
         export_df = pd.DataFrame.from_records(asdict(data) for data in serialized_data)
@@ -87,7 +98,7 @@ class HypoteketScraper(AbstractScraper):
 
         for s in self.sinks:
             log.info(f"exporting to {s}")
-            s.export(export_df)
+            s.export(export_df, name=self.provider)
 
     def __str__(self):
         return "HypoteketScraper"

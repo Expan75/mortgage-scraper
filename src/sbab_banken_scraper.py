@@ -36,7 +36,6 @@ class SBABResponse:
 
 class SBABScraper(AbstractScraper):
     """Scraper for https://sbab.se"""
-
     provider = 'sbab'
     url_parameters: Dict[int, List[Tuple[int, int]]] = None
     base_url = "https://www.sbab.se/www-open-rest-api"

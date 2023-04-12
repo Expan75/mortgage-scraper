@@ -11,7 +11,7 @@ from src.sbab_banken_scraper import SBABScraper
 from src.skandia_scraper import SkandiaBankenScraper
 
 
-log = logging.getLogger(__file__)
+log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
@@ -61,21 +61,18 @@ def setup_scrapers(sinks: List[AbstractSink], selected_targets: List[str]) -> Li
 
 
 def main():
+    """Main Entrypoint of scraper CLI tool"""
 
-    # parse
-    targets, sinks, debug = cli().values()
-    
+    targets, sinks, debug = cli().values()    
     max_urls = float("inf")
 
     if debug:
         logging.basicConfig(level=logging.DEBUG)
         max_urls = 10
 
-    # intialise
     initalised_sinks = setup_sinks(selected_sinks=sinks)
     initalised_scrapers = setup_scrapers(sinks=initalised_sinks, selected_targets=targets)
 
-    # run and log
     log.info(f"Selected data sinks: {initalised_sinks}")
     log.info(f"Selected scraping targets: {initalised_scrapers}")
     log.info("Beginning scraping job...")

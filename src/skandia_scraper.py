@@ -107,16 +107,23 @@ class SkandiaBankenScraper(AbstractScraper):
         
         log.info(f"scraping {len(urls)} urls...")
         headers =  { "Content-Type": "application/json" }
-        responses = [requests.post(url, data=asdict(body), headers=headers) for url, body in zip(urls, bodies)]
-        serialized_data = []
-        
-        for i, (response, parameters) in enumerate(zip(responses, bodies)):            
-            serialized_data.append(
-                SkandiaBankenResponse(**response.json(), **asdict(parameters))
-            )
-            if i % 100 == 0:
-                log.info(f"completed {i} of {len(urls)} scrapes")
 
+        responses = []
+
+        for i, (url, body) in enumerate(zip(urls, bodies)):
+            response = requests.post(url, asdict(body), headers=headers)            
+            code = response.status_code
+            if i % 100 == 0:
+                log.info(f"completed {i} of {len(urls)} scrapes")            
+            responses.append(response)
+
+            if code != 200:
+                log.critical(f"request to Skandia yielded {code} response")
+
+        serialized_data = [
+                SkandiaBankenResponse(**r.json(), **asdict(p)) for r, p in zip(response, bodies)
+        ]
+    
         log.info(f"successfully uncpacked {len(responses)}")
         export_df = pd.DataFrame.from_records(asdict(data) for data in serialized_data)
         log.info(f"Successfully scraped {len(export_df)}")
