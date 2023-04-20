@@ -27,5 +27,6 @@ In short:
 ```bash
 /notebooks      # contains pricing surface generation and EDA examples
 /src            # source code for scraper
+/tests          # test directory
 main.py         # cli entry point
 ```
