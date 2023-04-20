@@ -30,3 +30,9 @@ In short:
 /tests          # test directory
 main.py         # cli entry point
 ```
+
+### Tests
+
+```bash
+(venv) pytest
+```
