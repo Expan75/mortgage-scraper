@@ -16,7 +16,6 @@ from src.base_scraper import AbstractScraper
 log = logging.getLogger(__name__)
 
 
-
 @dataclass
 class AccessToken:
     """Represents the bearer token response that needs to be supplied"""

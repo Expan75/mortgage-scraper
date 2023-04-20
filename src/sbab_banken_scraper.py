@@ -36,7 +36,6 @@ class SBABResponse:
 
 class SBABScraper(AbstractScraper):
     """Scraper for https://sbab.se"""
-
     provider = 'sbab'
     url_parameters: Dict[int, List[Tuple[int, int]]] = None
     base_url = "https://www.sbab.se/www-open-rest-api"
@@ -67,7 +66,7 @@ class SBABScraper(AbstractScraper):
         return urls, parameters
     
     def get_scrape_url(self, loan_amount: int, estate_value: int) -> str:
-        return self.base_url + f'/resources/rantor/bolan/hamtaprisdiffaderantor/{loan_amount}/{estate_value}'
+        return self.base_url + f'/resources/rantor/bolan/hamtaprisdiffaderantor/{estate_value}/{loan_amount}'
     
     async def fetch(self, session, url) -> dict:
         async with session.get(url) as response:
@@ -75,8 +74,7 @@ class SBABScraper(AbstractScraper):
     
     async def fetch_urls(self, urls, event_loop):
         async with aiohttp.ClientSession(loop=event_loop) as session:
-            results = await asyncio.gather(*[self.fetch(session, url) for url in urls], return_exceptions=True)
-            return results
+            return await asyncio.gather(*[self.fetch(session, url) for url in urls], return_exceptions=True)
 
     def run_scraping_job(self, max_urls: int):
         """Manages the actual scraping job, exporting to each sink and so on"""
