@@ -1,7 +1,7 @@
 import logging
 import pandas as pd
 import requests
-from typing import Optional, OptionalDict, List, Tuple
+from typing import Optional, Dict, List, Tuple
 from itertools import product
 from dataclasses import dataclass, asdict
 
@@ -55,7 +55,7 @@ class SkandiaBankenScraper(AbstractScraper):
     """Scraper for https://www.skandia.se/epi-api"""
 
     provider = "skandia"
-    url_parameters: OptionalDict[int, List[Tuple[int, int]]] = None
+    url_parameters: Optional[Dict[int, List[Tuple[int, int]]]] = None
     base_url = "https://www.skandia.se/epi-api"
 
     def __init__(self, sinks: List[AbstractSink], *args, **kwargs):
@@ -100,10 +100,11 @@ class SkandiaBankenScraper(AbstractScraper):
 
         return bodies
 
-    def run_scraping_job(self, max_urls: int):
+    def run_scraping_job(self, max_urls: int) -> None:
         """Manages the actual scraping job, exporting to each sink and so on"""
         bodies = self.generate_scrape_bodies() # params here
         urls = ["https://www.skandia.se/papi/mortgage/v2.0/discounts" for _ in bodies] 
+        
         if max_urls < float("inf"):
             urls = urls[:max_urls]
         
@@ -123,7 +124,8 @@ class SkandiaBankenScraper(AbstractScraper):
                 log.critical(f"request to Skandia yielded {code} response")
 
         serialized_data = [
-                SkandiaBankenResponse(**r.json(), **asdict(p)) for r, p in zip(response, bodies)
+            SkandiaBankenResponse(**r.json(), **asdict(p)) for p, r
+            in zip(response, bodies)
         ]
     
         log.info(f"successfully uncpacked {len(responses)}")
@@ -133,7 +135,7 @@ class SkandiaBankenScraper(AbstractScraper):
 
         for s in self.sinks:
             log.info(f"exporting to {s}")
-            s.export(export_df, self.provider)
+            s.export(export_df, name="skandiabanken")
 
     def __str__(self):
         return "SkandiaBankenScraper"

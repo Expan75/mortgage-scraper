@@ -2,7 +2,7 @@ import logging
 import datetime
 import pandas as pd
 from itertools import product
-from typing import Dict, List, Tuple
+from typing import Dict, Optional, List, Tuple
 from dataclasses import dataclass, asdict
 
 import requests
@@ -32,11 +32,12 @@ class HypoteketScraper(AbstractScraper):
     """Scraper for https://api.hypoteket.com"""
 
     provider = "hypoteket"
-    url_parameters: List[Tuple[int, int]] = None
+    url_parameters: Optional[List[Tuple[int, int]]] = None
     base_url = "https://api.hypoteket.com/api/v1"
 
-    def __init__(self, sinks: List[AbstractSink], *args, **kwargs):
+    def __init__(self, sinks: List[AbstractSink], max_urls, *args, **kwargs):
         self.parameter_matrix = self.generate_parameter_matrix()
+        self.max_urls = max_urls
         self.sinks = sinks
 
     def generate_parameter_matrix(self):
@@ -61,12 +62,12 @@ class HypoteketScraper(AbstractScraper):
     def get_scrape_url(self, loan_amount: int, estate_value: int) -> str:
         return f"""{self.base_url + f'/loans/interestRates?propertyValue={estate_value}&loanSize={loan_amount}'}"""
 
-    def run_scraping_job(self, max_urls: int):
+    def run_scraping_job(self):
         """Manages the actual scraping job, exporting to each sink and so on"""
         
         urls = self.generate_scrape_urls()
         if max_urls < float("inf"):
-            urls = urls[:max_urls]
+            urls = urls[:self.max_urls]
         log.info(f"scraping {len(urls)} urls...")
 
         # given aggresive rate-limiting, defer to synchronous requests

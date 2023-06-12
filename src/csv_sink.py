@@ -31,7 +31,7 @@ class CSVSink(AbstractSink):
         return f"{name}_mortgage_pricing_" + self.utc_timestamp() + ".csv"
 
     def utc_timestamp(self) -> str:
-        return datetime.now().strftime("%d_%m_%y")
+        return datetime.now().strftime("%d_%m_%y_%H:%M:%S")
 
     def __str__(self):
         return "CSVSink"

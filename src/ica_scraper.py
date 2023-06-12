@@ -1,13 +1,13 @@
 import json
 import logging
-import pandas as pd
 import urllib.request
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 from itertools import product
 from dataclasses import dataclass, asdict
 
 import aiohttp
 import asyncio
+import pandas as pd
 
 from src.base_sink import AbstractSink
 from src.base_scraper import AbstractScraper
@@ -17,8 +17,7 @@ log = logging.getLogger(__name__)
 
 
 @dataclass
-class AccessToken:
-    """Represents the bearer token response that needs to be supplied"""
+class AccessTokenResponse:
     access_token: str
     expires_in: int
 
@@ -57,20 +56,18 @@ class IcaBankenScraper(AbstractScraper):
     """Scraper for https://www.icabanken.se"""
 
     provider = "ica"
-    url_parameters: Dict[int, List[Tuple[int, int]]] = None
-    access_token: AccessToken = None
+    url_parameters: Optional[Dict[int, List[Tuple[int, int]]]] = None
+    access_token: str
     base_url = "https://www.icabanken.se/api"
 
-    def __init__(self, sinks: List[AbstractSink], *args, **kwargs):
+    def __init__(self, sinks: List[AbstractSink], max_urls, *args, **kwargs):
         self.parameter_matrix = self.generate_parameter_matrix()
         self.sinks = sinks
+        self.max_urls = max_urls
         self.refresh_access_token()
 
     def generate_parameter_matrix(self):
-        """
-        Generates a request parameter matrix for generating URLs
-        """
-
+        """Generates a request parameter matrix for generating URLs"""
         valid_periods_in_months = [3, 12, 36, 60]
         loan_amount_bins = [100_000 * i for i in range(1,101)] # min 100k max 10 mil.
         asset_value_bins = [100_000 * i for i in range(1,101)] # min 100k max 10 mil.
@@ -95,45 +92,47 @@ class IcaBankenScraper(AbstractScraper):
     def get_scrape_url(self, period: int, loan_amount: int, asset_value: int) -> str:
         return f"""https://apimgw-pub.ica.se/t/public.tenant/ica/bank/ac39/mortgage/1.0.0/interestproposal_v2_0?type_of_mortgage=BL&period_of_commitment={period}&loan_amount={loan_amount}&value_of_the_estate={asset_value}&ica_spend_amount=0"""
 
-    def get_access_token(self) -> AccessToken:
+    def get_access_token(self) -> str:
         """Retrieves an access token to be used for auth against api"""
         url = self.base_url + "/token/public"
         with urllib.request.urlopen(url) as response:
             data = json.load(response)
-        return AccessToken(**data)
+        return AccessTokenResponse(**data).access_token
 
     def refresh_access_token(self):
         """Util for refreshing access token and saving it"""
         self.access_token = self.get_access_token()
 
-    def get_auth_header(self) -> str:
-        """Util for defining valid auth header"""
-        return {"Authorization": f"Bearer {self.access_token.access_token}"}
+    @property
+    def auth_header(self) -> dict[str,str]:
+        return { "Authorization": f"Bearer {self.access_token}" }
 
     def scrape_url(self, url: str) -> IcaBankenResponse:
         """Scrapes the json off of the provided url"""
-
         request = urllib.request.Request(url)
-        request.add_header(*self.get_auth_header().split(": "))
+
+        (auth_header, auth_header_value), _ = self.auth_header.items()
+        request.add_header(auth_header, auth_header_value)       
 
         with urllib.request.urlopen(request) as response:
             data = json.load(response)["response"]
             return IcaBankenResponse(**data)
         
     async def fetch(self, session, url) -> IcaBankenResponse:
-        async with session.get(url, headers=self.get_auth_header()) as response:
+        async with session.get(url, headers=self.auth_header) as response:
             return await response.json()
     
     async def fetch_urls(self, urls, event_loop):
         async with aiohttp.ClientSession(loop=event_loop) as session:
-            results = await asyncio.gather(*[self.fetch(session, url) for url in urls], return_exceptions=True)
+            results = await asyncio.gather(
+                *[self.fetch(session, url) for url in urls], return_exceptions=True
+            )
             return results
 
-    def run_scraping_job(self, max_urls: int):
+    def run_scraping_job(self):
         """Manages the actual scraping job, exporting to each sink and so on"""
         urls, parameters = self.generate_scrape_urls()
-        if max_urls < float("inf"):
-            urls = urls[:max_urls]
+        urls = urls[:self.max_urls]
         log.info(f"scraping {len(urls)} urls...")
         
         loop = asyncio.get_event_loop()
