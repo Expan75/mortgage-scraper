@@ -1,7 +1,7 @@
 import logging
 import pandas as pd
 import requests
-from typing import Dict, List, Tuple
+from typing import Optional, OptionalDict, List, Tuple
 from itertools import product
 from dataclasses import dataclass, asdict
 
@@ -55,7 +55,7 @@ class SkandiaBankenScraper(AbstractScraper):
     """Scraper for https://www.skandia.se/epi-api"""
 
     provider = "skandia"
-    url_parameters: Dict[int, List[Tuple[int, int]]] = None
+    url_parameters: OptionalDict[int, List[Tuple[int, int]]] = None
     base_url = "https://www.skandia.se/epi-api"
 
     def __init__(self, sinks: List[AbstractSink], *args, **kwargs):
@@ -93,7 +93,9 @@ class SkandiaBankenScraper(AbstractScraper):
         for key in self.parameter_matrix:
             bindingPeriod, housingInterest = key.strip().split(";")
             for loan_amount, asset_amount in self.parameter_matrix[key]:
-                body = self.generate_scrape_body(bindingPeriod, housingInterest, loan_amount, asset_amount)
+                body = self.generate_scrape_body(
+                    bindingPeriod, housingInterest, loan_amount, asset_amount
+                )
                 bodies.append(body)
 
         return bodies

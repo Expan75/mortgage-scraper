@@ -1,4 +1,5 @@
 import logging
+import numpy as np
 import pandas as pd
 from itertools import product
 from typing import Dict, List, Tuple
@@ -45,12 +46,17 @@ class SBABScraper(AbstractScraper):
         self.sinks = sinks
 
     def generate_parameter_matrix(self):
-        """
-        Generates a request parameter matrix for generating URLs
-        """
+        """Generates a request parameter matrix for generating URLs"""
 
         loan_amount_bins = [50_000 * i for i in range(1,201)] # min 50k max 10 mil.
-        asset_value_bins = [50_000 * i for i in range(1,201)] # min 50k max 10 mil.
+
+        # construct asset_value_bins based off of .005 increments
+        asset_value_bins = []
+        for ltv in np.arange(0.005, 1, 0.005):
+            for mortgage_amount in loan_amount_bins:
+                asset_value = 1 / (ltv / mortgage_amount)
+                asset_value_bins.append(asset_value)
+
         parameter_matrix = list(product(loan_amount_bins, asset_value_bins))
 
         return parameter_matrix
@@ -66,13 +72,16 @@ class SBABScraper(AbstractScraper):
         return urls, parameters
     
     def get_scrape_url(self, loan_amount: int, estate_value: int) -> str:
+        """Formats a scrape url based of 2-dim pricing parameters"""
         return self.base_url + f'/resources/rantor/bolan/hamtaprisdiffaderantor/{estate_value}/{loan_amount}'
     
     async def fetch(self, session, url) -> dict:
+        """Actual request sender; processes concurrently"""
         async with session.get(url) as response:
             return await response.json()
     
     async def fetch_urls(self, urls, event_loop):
+        """Batches all conccurent requests and excecutes them, maxing out the default connection poolsize"""
         async with aiohttp.ClientSession(loop=event_loop) as session:
             return await asyncio.gather(*[self.fetch(session, url) for url in urls], return_exceptions=True)
 

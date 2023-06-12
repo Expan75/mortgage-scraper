@@ -14,7 +14,9 @@ logging.basicConfig(level=logging.INFO)
 class CSVSink(AbstractSink):
     """A sink for exporting scraped data as .csv file"""
 
-    data_dir = str(pathlib.Path(os.path.dirname(os.path.realpath(__file__))).parent.resolve()) + "/data"
+    data_dir = str(pathlib.Path(
+        os.path.dirname(os.path.realpath(__file__))
+    ).parent.resolve()) + "/data"
 
     def export(self, df: pd.DataFrame, name: str):
         """Expects a named df"""

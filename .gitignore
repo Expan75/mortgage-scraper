@@ -9,6 +9,12 @@ data/
 # C extensions
 *.so
 
+# notebook artifacts
+.ipynb_checkpoints
+
+# mypy
+.mypy_cache
+
 # Distribution / packaging
 .Python
 build/
