@@ -1,4 +1,11 @@
+from dataclasses import dataclass
 from abc import ABC, abstractmethod
+
+
+@dataclass
+class ScraperConfig:
+    proxy: str
+
 
 class AbstractScraper(ABC):
 

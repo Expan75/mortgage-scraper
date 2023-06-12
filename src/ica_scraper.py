@@ -60,11 +60,12 @@ class IcaBankenScraper(AbstractScraper):
     access_token: str
     base_url = "https://www.icabanken.se/api"
 
-    def __init__(self, sinks: List[AbstractSink], max_urls, *args, **kwargs):
+    def __init__(self, sinks: List[AbstractSink], max_urls: int, proxy: str):
         self.parameter_matrix = self.generate_parameter_matrix()
         self.sinks = sinks
         self.max_urls = max_urls
         self.refresh_access_token()
+        self.proxy = proxy
 
     def generate_parameter_matrix(self):
         """Generates a request parameter matrix for generating URLs"""
@@ -106,18 +107,7 @@ class IcaBankenScraper(AbstractScraper):
     @property
     def auth_header(self) -> dict[str,str]:
         return { "Authorization": f"Bearer {self.access_token}" }
-
-    def scrape_url(self, url: str) -> IcaBankenResponse:
-        """Scrapes the json off of the provided url"""
-        request = urllib.request.Request(url)
-
-        (auth_header, auth_header_value), _ = self.auth_header.items()
-        request.add_header(auth_header, auth_header_value)       
-
-        with urllib.request.urlopen(request) as response:
-            data = json.load(response)["response"]
-            return IcaBankenResponse(**data)
-        
+ 
     async def fetch(self, session, url) -> IcaBankenResponse:
         async with session.get(url, headers=self.auth_header) as response:
             return await response.json()

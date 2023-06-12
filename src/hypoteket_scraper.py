@@ -2,7 +2,7 @@ import logging
 import datetime
 import pandas as pd
 from itertools import product
-from typing import Dict, Optional, List, Tuple
+from typing import Union, Optional, List, Tuple
 from dataclasses import dataclass, asdict
 
 import requests
@@ -35,10 +35,16 @@ class HypoteketScraper(AbstractScraper):
     url_parameters: Optional[List[Tuple[int, int]]] = None
     base_url = "https://api.hypoteket.com/api/v1"
 
-    def __init__(self, sinks: List[AbstractSink], max_urls, *args, **kwargs):
+    def __init__(
+        self, 
+        sinks: List[AbstractSink],
+        max_urls: Union[int,float],
+        proxy: str
+    ):
         self.parameter_matrix = self.generate_parameter_matrix()
         self.max_urls = max_urls
         self.sinks = sinks
+        self.proxy = proxy
 
     def generate_parameter_matrix(self):
         """
@@ -66,17 +72,22 @@ class HypoteketScraper(AbstractScraper):
         """Manages the actual scraping job, exporting to each sink and so on"""
         
         urls = self.generate_scrape_urls()
-        if max_urls < float("inf"):
+        if self.max_urls < float("inf"):
             urls = urls[:self.max_urls]
         log.info(f"scraping {len(urls)} urls...")
 
         # given aggresive rate-limiting, defer to synchronous requests
-        headers = {"Content-Type": "application/json"}
         responses = []
-        for i, url in enumerate(urls):
-            res = requests.get(url, headers=headers)
-            responses.append(res)
+        request_options = { 
+            "headers": {"Content-Type": "application/json"}
+        }
+        if self.proxy:
+            protocol = "http" if "https" not in self.proxy else "https"
+            request_options["proxies"] = { protocol: self.proxy }
 
+        for i, url in enumerate(urls):
+            res = requests.get(url, **request_options)
+            responses.append(res)
             if res.status_code != 200:
                 log.critical(f"Hypoteket requests yield {res.status_code}")
 
@@ -92,7 +103,6 @@ class HypoteketScraper(AbstractScraper):
     
         log.info(f"successfully uncpacked {len(urls)} requests")
         export_df = pd.DataFrame.from_records(asdict(data) for data in serialized_data)
-        export_df.name = "hypoteket"
 
         log.info(f"Successfully scraped {len(export_df)}")
         log.info(f"exporting to {self.sinks}")
