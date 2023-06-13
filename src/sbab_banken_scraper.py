@@ -10,6 +10,7 @@ import asyncio
 
 from src.base_sink import AbstractSink
 from src.base_scraper import AbstractScraper
+from src.segment import MortgageMarketSegment, generate_segments
 
 
 log = logging.getLogger(__name__)
@@ -30,10 +31,6 @@ class SBABResponse:
     Rantebindningstid: int
     EffektivRantesats: float
     
-    # already present upon request creation
-    loan_amount: float
-    asset_value: float
-
 
 class SBABScraper(AbstractScraper):
     """Scraper for https://sbab.se"""
@@ -48,48 +45,27 @@ class SBABScraper(AbstractScraper):
         proxy: str, 
         max_urls: Optional[int] = None
     ):
-        self.parameter_matrix = self.generate_parameter_matrix()
         self.sinks = sinks
         self.proxy = proxy
         self.max_urls = max_urls
 
-    def generate_parameter_matrix(self):
-        """Generates a request parameter matrix for generating URLs"""
-
-        loan_amount_bins = [50_000 * i for i in range(1,201)] # min 50k max 10 mil.
-
-        # construct asset_value_bins based off of .005 increments
-        asset_value_bins = []
-        for ltv in np.arange(0.005, 1, 0.005):
-            for mortgage_amount in loan_amount_bins:
-                asset_value = int(1 / (ltv / mortgage_amount))
-                asset_value_bins.append(asset_value)
-
-        parameter_matrix = list(product(loan_amount_bins, asset_value_bins))
-
-        return parameter_matrix
-
-    def generate_scrape_urls(self) -> Tuple[List[str], List[QueryParameterPair]]:
-        """Formats scraping urls based off of generated parameter matrix"""
-        urls, parameters = [], []
-        for loan_amount, asset_amount in self.parameter_matrix:
-            query_parmaeters = QueryParameterPair(loan_amount, asset_amount) 
-            parameters.append(query_parmaeters)
-            urls.append(self.get_scrape_url(loan_amount, asset_amount))
-
-        return urls, parameters
     
     def get_scrape_url(self, loan_amount: int, estate_value: int) -> str:
         """Formats a scrape url based of 2-dim pricing parameters"""
         return (
             self.base_url
             + "/resources/rantor"
-            + f"/bolan/hamtaprisdiffaderantor/{estate_value}/{loan_amount}"
+            + f"/bolan/hamtaprisdiffaderantor/{int(estate_value)}/{int(loan_amount)}"
         )
+    
+    def generate_scrape_urls(self) -> Tuple[List[str], List[MortgageMarketSegment]]:
+        """Formats scraping urls based off of generated parameter matrix"""
+        segments = generate_segments()
+        urls = [self.get_scrape_url(s.loan_amount, s.asset_value) for s in segments]
+        return urls, segments
     
     async def fetch(self, session, url) -> dict:
         """Actual request sender; processes concurrently"""
-        log.info("visiting: ", url)
         if self.proxy:
             async with session.get(url, proxy=self.proxy) as response:
                 return await response.json()
@@ -109,7 +85,7 @@ class SBABScraper(AbstractScraper):
     def run_scraping_job(self):
         """Manages the actual scraping job, exporting to each sink and so on"""
         
-        urls, parameters = self.generate_scrape_urls()
+        urls, segments = self.generate_scrape_urls()
         if self.max_urls is not None:
             urls = urls[:self.max_urls]
 
@@ -117,22 +93,16 @@ class SBABScraper(AbstractScraper):
         
         loop = asyncio.get_event_loop()
         responses = loop.run_until_complete(self.fetch_urls(urls, loop))
-        serialized_data = []
-
-        for i, (response, parameters) in enumerate(zip(responses, parameters)):
-            for data in response:
-                serialized_data.append(SBABResponse(**data, **asdict(parameters)))
+        
+        exportable_records = []
+        for response, segment in zip(responses, segments):  
+            serialized_data = [SBABResponse(**data) for data in response]
+            for serialized in serialized_data:
+                record = { **asdict(serialized), **asdict(segment) }
+                exportable_records.append(record)
             
-            if i % 100 == 0:
-                log.info(f"completed {i} of {len(urls)} scrapes")
-    
-        log.info(f"successfully uncpacked {len(urls)} requests")
-        export_df = pd.DataFrame.from_records(asdict(data) for data in serialized_data)
-        export_df['provider'] = self.provider
-
+        export_df = pd.DataFrame.from_records(exportable_records)
         log.info(f"Successfully scraped {len(export_df)}")
-        log.info(f"exporting to {self.sinks}")
-
         for s in self.sinks:
             log.info(f"exporting to {s}")
             s.export(export_df, self.provider)

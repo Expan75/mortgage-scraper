@@ -9,7 +9,7 @@ import requests
 
 from src.base_sink import AbstractSink
 from src.base_scraper import AbstractScraper
-
+from src.segment import MortgageMarketSegment, generate_segments
 
 log = logging.getLogger(__name__)
 
@@ -37,42 +37,33 @@ class HypoteketScraper(AbstractScraper):
 
     def __init__(
         self, 
+        proxy: str,
         sinks: List[AbstractSink],
-        max_urls: Union[int,float],
-        proxy: str
-    ):
-        self.parameter_matrix = self.generate_parameter_matrix()
+        max_urls: Optional[int] = None
+     ):
         self.max_urls = max_urls
         self.sinks = sinks
         self.proxy = proxy
 
-    def generate_parameter_matrix(self):
-        """
-        Generates a request parameter matrix for generating URLs
-        """
-        loan_amount_bins = [100_000 * i for i in range(1,101)] # min 100k max 10 mil.
-        asset_value_bins = [100_000 * i for i in range(1,101)] # min 100k max 10 mil.
-        parameter_matrix = list(product(loan_amount_bins, asset_value_bins))
-
-        return parameter_matrix
-
     def generate_scrape_urls(self) -> List[str]:
-        """Formats scraping urls based off of generated parameter matrix"""
-        urls = []
-        for loan_amount, asset_amount in self.parameter_matrix:
-            url = self.get_scrape_url(loan_amount, asset_amount)
-            urls.append(url)
-
+        """Formats scraping urls based off of generated segments matrix"""
+        urls = [
+            self.get_scrape_url(segment.loan_amount, segment.asset_amount)
+            for segment in generate_segments()
+        ]
         return urls
     
     def get_scrape_url(self, loan_amount: int, estate_value: int) -> str:
-        return f"""{self.base_url + f'/loans/interestRates?propertyValue={estate_value}&loanSize={loan_amount}'}"""
+        return (
+            f"{self.base_url}" 
+            + "/loans/interestRates"
+            + f"?propertyValue={estate_value}&loanSize={loan_amount}"
+        )
 
     def run_scraping_job(self):
-        """Manages the actual scraping job, exporting to each sink and so on"""
-        
+        """Manages the actual scraping job, exporting to each sink and so on""" 
         urls = self.generate_scrape_urls()
-        if self.max_urls < float("inf"):
+        if self.max_urls is not None:
             urls = urls[:self.max_urls]
         log.info(f"scraping {len(urls)} urls...")
 

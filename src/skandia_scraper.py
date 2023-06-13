@@ -112,9 +112,9 @@ class SkandiaBankenScraper(AbstractScraper):
     def run_scraping_job(self) -> None:
         """Manages the actual scraping job, exporting to each sink and so on"""
         bodies = self.generate_scrape_bodies() # params here
+    
         urls = ["https://www.skandia.se/papi/mortgage/v2.0/discounts" for _ in bodies]
-        
-        if self.max_urls:
+        if self.max_urls is not None:
             urls = urls[:self.max_urls]
         
         log.info(f"scraping {len(urls)} urls...")

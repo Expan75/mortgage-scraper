@@ -1,6 +1,6 @@
 import logging
 import argparse
-from typing import List, Dict, Union, Any
+from typing import List, Dict, Optional, Union, Any
 from src.base_sink import AbstractSink
 from src.base_scraper import AbstractScraper
 from src.csv_sink import CSVSink
@@ -48,7 +48,7 @@ def cli():
     parser.add_argument("-s", "--store", required=True)
     parser.add_argument("-d", "--debug", action="store_true", default=False)
     parser.add_argument("-v", "--version", action="version", version=VERSION)
-    parser.add_argument("-l", "--limit", default=float("inf"), type=int) 
+    parser.add_argument("-l", "--limit", default=None, type=int) 
     parser.add_argument("-p", "--proxy", default="", type=str)
     args = parser.parse_args()
     args.targets = [t.lower().strip() for t in args.target.split(",")]
@@ -67,7 +67,7 @@ def setup_sinks(selected_sinks: List[str]) -> List[AbstractSink]:
 def setup_scrapers(
     sinks: List[AbstractSink], 
     selected_targets: List[str],
-    max_urls: Union[int,float],
+    max_urls: Optional[int],
     proxy: str
 ) -> List[AbstractScraper]:
     """Setups the selected scrapers based off of config"""
