@@ -2,7 +2,7 @@ import logging
 import numpy as np
 import pandas as pd
 from itertools import product
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass, asdict
 
 import aiohttp
@@ -37,13 +37,21 @@ class SBABResponse:
 
 class SBABScraper(AbstractScraper):
     """Scraper for https://sbab.se"""
+    url_parameters: Optional[Dict[int, List[Tuple[int, int]]]] = None
+    
     provider = 'sbab'
-    url_parameters: Dict[int, List[Tuple[int, int]]] = None
     base_url = "https://www.sbab.se/www-open-rest-api"
-
-    def __init__(self, sinks: List[AbstractSink], *args, **kwargs):
+    
+    def __init__(
+        self, 
+        sinks: List[AbstractSink], 
+        proxy: str, 
+        max_urls: Union[float,int]
+    ):
         self.parameter_matrix = self.generate_parameter_matrix()
         self.sinks = sinks
+        self.proxy = proxy
+        self.max_urls = max_urls
 
     def generate_parameter_matrix(self):
         """Generates a request parameter matrix for generating URLs"""
@@ -73,24 +81,36 @@ class SBABScraper(AbstractScraper):
     
     def get_scrape_url(self, loan_amount: int, estate_value: int) -> str:
         """Formats a scrape url based of 2-dim pricing parameters"""
-        return self.base_url + f'/resources/rantor/bolan/hamtaprisdiffaderantor/{estate_value}/{loan_amount}'
+        return (
+            self.base_url
+            + "/resources/rantor"
+            + "/bolan/hamtaprisdiffaderantor/{estate_value}/{loan_amount}"
+        )
+
     
     async def fetch(self, session, url) -> dict:
         """Actual request sender; processes concurrently"""
-        async with session.get(url) as response:
-            return await response.json()
+        if self.proxy:
+            async with session.get(url, proxy=self.proxy) as response:
+                return await response.json()
+        else:
+            async with session.get(url) as response:
+                return await response.json()
     
     async def fetch_urls(self, urls, event_loop):
-        """Batches all conccurent requests and excecutes them, maxing out the default connection poolsize"""
+        """Batches conccurent requests spread over the default conneciton poolsize"""
         async with aiohttp.ClientSession(loop=event_loop) as session:
-            return await asyncio.gather(*[self.fetch(session, url) for url in urls], return_exceptions=True)
+            # gather needs to occur with spread operator or manually provide each arg!
+            results = await asyncio.gather(
+                *[self.fetch(session=session, url=url) for url in urls]
+            )
+            return results
 
-    def run_scraping_job(self, max_urls: int):
+    def run_scraping_job(self):
         """Manages the actual scraping job, exporting to each sink and so on"""
         
         urls, parameters = self.generate_scrape_urls()
-        if max_urls < float("inf"):
-            urls = urls[:max_urls]
+        urls = urls[:self.max_urls]
 
         log.info(f"scraping {len(urls)} urls...")
         
