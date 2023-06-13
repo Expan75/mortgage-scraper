@@ -7,7 +7,7 @@ from datetime import datetime
 from src.base_sink import AbstractSink
 
 
-log = logging.getLogger(__file__)
+log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 

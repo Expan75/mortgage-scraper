@@ -1,12 +1,17 @@
-import json
 import logging
-import urllib.request
-from typing import Dict, List, Tuple, Optional
+from typing import (
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Union
+)
 from itertools import product
 from dataclasses import dataclass, asdict
 
 import aiohttp
 import asyncio
+import requests
 import pandas as pd
 
 from src.base_sink import AbstractSink
@@ -61,11 +66,23 @@ class IcaBankenScraper(AbstractScraper):
     base_url = "https://www.icabanken.se/api"
 
     def __init__(self, sinks: List[AbstractSink], max_urls: int, proxy: str):
+        self.proxy = proxy
         self.parameter_matrix = self.generate_parameter_matrix()
         self.sinks = sinks
         self.max_urls = max_urls
         self.refresh_access_token()
-        self.proxy = proxy
+
+    @property
+    def proxy_supports_https(self) -> bool:
+        return "https" in self.proxy
+
+    @property
+    def proxy_supports_basic_auth(self) -> bool:
+        return len(self.proxy.split(":")[0].split("@")) > 1
+   
+    @property
+    def auth_header(self) -> dict[str,str]:
+        return { "Authorization": f"Bearer {self.access_token}" }
 
     def generate_parameter_matrix(self):
         """Generates a request parameter matrix for generating URLs"""
@@ -85,6 +102,7 @@ class IcaBankenScraper(AbstractScraper):
             for loan_amount, asset_amount in self.parameter_matrix[period]:
                 triplet = ParameterTriplet(period, loan_amount, asset_amount)
                 url = self.get_scrape_url(**asdict(triplet))
+
                 urls.append(url)
                 parameters.append(triplet)
 
@@ -95,27 +113,34 @@ class IcaBankenScraper(AbstractScraper):
 
     def get_access_token(self) -> str:
         """Retrieves an access token to be used for auth against api"""
-        url = self.base_url + "/token/public"
-        with urllib.request.urlopen(url) as response:
-            data = json.load(response)
-        return AccessTokenResponse(**data).access_token
+        request = { 
+            "url": self.base_url + "/token/public",
+        }
+        if self.proxy and self.proxy_supports_https:
+            request["proxies"] = { "https": self.proxy }
+        elif self.proxy:
+            request["proxies"] = { "http": self.proxy }
+        
+        response = requests.get(**request)
+        token_response = AccessTokenResponse(**response.json())
+        return token_response.access_token
 
     def refresh_access_token(self):
         """Util for refreshing access token and saving it"""
         self.access_token = self.get_access_token()
 
-    @property
-    def auth_header(self) -> dict[str,str]:
-        return { "Authorization": f"Bearer {self.access_token}" }
- 
     async def fetch(self, session, url) -> IcaBankenResponse:
-        async with session.get(url, headers=self.auth_header) as response:
+        options: Dict[str, Union[dict,str]] = { "headers": self.auth_header }
+        if self.proxy:
+            options["proxy"] = self.proxy
+        async with session.get(url, **options) as response:
             return await response.json()
     
     async def fetch_urls(self, urls, event_loop):
         async with aiohttp.ClientSession(loop=event_loop) as session:
+            # gather needs to occur with spread operator or manually provide each arg!
             results = await asyncio.gather(
-                *[self.fetch(session, url) for url in urls], return_exceptions=True
+                *[self.fetch(session=session, url=url) for url in urls]
             )
             return results
 
@@ -127,6 +152,7 @@ class IcaBankenScraper(AbstractScraper):
         
         loop = asyncio.get_event_loop()
         responses = loop.run_until_complete(self.fetch_urls(urls, loop))
+        print(responses[:2])
         serialized_data = []
         
         for i, (response, params) in enumerate(zip(responses, parameters)):

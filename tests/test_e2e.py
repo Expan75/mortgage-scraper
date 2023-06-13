@@ -9,8 +9,7 @@ def test_should_find_entrypoint(entrypoint: str):
 
 
 def test_should_perform_cli_basics(entrypoint: str): 
-    result = subprocess.run(["python3", entrypoint, "--version"], capture_output=True)
-    
+    result = subprocess.run(["python3", entrypoint, "--version"], capture_output=True) 
     assert VERSION in str(result.stdout), "version should be readable"
     assert result.returncode == 0, "should exit without error code"
 
@@ -44,5 +43,5 @@ def test_should_use_proxy_if_available(entrypoint: str, project_dir: Path):
             "--proxy", proxy
         ])
         assert result.returncode == 0, "should exit without error code"
-        assert len(os.listdir(data_dir)) > len(files), "test run did not yield stored csv"
+        assert len(os.listdir(data_dir)) > len(files), "test run did not store .csv"
 
