@@ -65,7 +65,7 @@ class IcaBankenScraper(AbstractScraper):
     access_token: str
     base_url = "https://www.icabanken.se/api"
 
-    def __init__(self, sinks: List[AbstractSink], max_urls: int, proxy: str):
+    def __init__(self, sinks: List[AbstractSink], proxy: str, max_urls: int = None):
         self.proxy = proxy
         self.parameter_matrix = self.generate_parameter_matrix()
         self.sinks = sinks
@@ -147,7 +147,9 @@ class IcaBankenScraper(AbstractScraper):
     def run_scraping_job(self):
         """Manages the actual scraping job, exporting to each sink and so on"""
         urls, parameters = self.generate_scrape_urls()
-        urls = urls[:self.max_urls]
+        
+        if self.max_urls is not None:
+            urls = urls[:self.max_urls]
         log.info(f"scraping {len(urls)} urls...")
         
         loop = asyncio.get_event_loop()

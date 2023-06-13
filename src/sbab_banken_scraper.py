@@ -46,7 +46,7 @@ class SBABScraper(AbstractScraper):
         self, 
         sinks: List[AbstractSink], 
         proxy: str, 
-        max_urls: Union[float,int]
+        max_urls: Optional[int] = None
     ):
         self.parameter_matrix = self.generate_parameter_matrix()
         self.sinks = sinks
@@ -110,7 +110,8 @@ class SBABScraper(AbstractScraper):
         """Manages the actual scraping job, exporting to each sink and so on"""
         
         urls, parameters = self.generate_scrape_urls()
-        urls = urls[:self.max_urls]
+        if self.max_urls is not None:
+            urls = urls[:self.max_urls]
 
         log.info(f"scraping {len(urls)} urls...")
         
