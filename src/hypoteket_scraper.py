@@ -48,7 +48,7 @@ class HypoteketScraper(AbstractScraper):
     def generate_scrape_urls(self) -> List[str]:
         """Formats scraping urls based off of generated segments matrix"""
         urls = [
-            self.get_scrape_url(segment.loan_amount, segment.asset_amount)
+            self.get_scrape_url(segment.loan_amount, segment.asset_value)
             for segment in generate_segments()
         ]
         return urls
