@@ -62,7 +62,7 @@ class SBABScraper(AbstractScraper):
         asset_value_bins = []
         for ltv in np.arange(0.005, 1, 0.005):
             for mortgage_amount in loan_amount_bins:
-                asset_value = 1 / (ltv / mortgage_amount)
+                asset_value = int(1 / (ltv / mortgage_amount))
                 asset_value_bins.append(asset_value)
 
         parameter_matrix = list(product(loan_amount_bins, asset_value_bins))
@@ -84,12 +84,12 @@ class SBABScraper(AbstractScraper):
         return (
             self.base_url
             + "/resources/rantor"
-            + "/bolan/hamtaprisdiffaderantor/{estate_value}/{loan_amount}"
+            + f"/bolan/hamtaprisdiffaderantor/{estate_value}/{loan_amount}"
         )
-
     
     async def fetch(self, session, url) -> dict:
         """Actual request sender; processes concurrently"""
+        log.info("visiting: ", url)
         if self.proxy:
             async with session.get(url, proxy=self.proxy) as response:
                 return await response.json()
