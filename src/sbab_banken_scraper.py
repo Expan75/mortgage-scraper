@@ -38,7 +38,7 @@ class SBABScraper(AbstractScraper):
     
     provider = 'sbab'
     base_url = "https://www.sbab.se/www-open-rest-api"
-    
+   
     def __init__(
         self, 
         sinks: List[AbstractSink], 
@@ -48,7 +48,6 @@ class SBABScraper(AbstractScraper):
         self.sinks = sinks
         self.proxy = proxy
         self.max_urls = max_urls
-
     
     def get_scrape_url(
         self,

@@ -1,11 +1,13 @@
 import logging
 from typing import (
+    Any,
     Dict,
     List,
     Optional,
     Tuple,
     Union
 )
+from datetime import datetime, timedelta
 from itertools import product
 from dataclasses import dataclass, asdict
 
@@ -24,7 +26,7 @@ log = logging.getLogger(__name__)
 @dataclass
 class AccessTokenResponse:
     access_token: str
-    expires_in: int
+    expires_in: int 
 
 
 @dataclass
@@ -49,9 +51,11 @@ class IcaBankenScraper(AbstractScraper):
 
     provider = "ica"
     url_parameters: Optional[Dict[int, List[Tuple[int, int]]]] = None
-    access_token: str
     base_url = "https://www.icabanken.se/api"
     max_urls: Optional[int]
+   
+    access_token: str
+    token_last_updated_at: datetime
 
     def __init__(self, sinks: List[AbstractSink], proxy: str, max_urls: int):
         self.proxy = proxy
@@ -67,35 +71,18 @@ class IcaBankenScraper(AbstractScraper):
     def proxy_supports_basic_auth(self) -> bool:
         return len(self.proxy.split(":")[0].split("@")) > 1
    
-    @property
-    def auth_header(self) -> dict[str,str]:
-        return { "Authorization": f"Bearer {self.access_token}" }
+    def access_token_expired(self) -> bool: 
+        token_expiry_date = self.token_last_updated_at + timedelta(minutes=1) 
+        return datetime.now() > token_expiry_date
 
-    def get_scrape_url(self, period: int, loan_amount: int, asset_value: int) -> str:
-        return (
-            "https://apimgw-pub.ica.se/t/public.tenant/ica/bank/ac39/mortgage/1.0.0/interestproposal_v2_0?type_of_mortgage=BL"
-            + f"&period_of_commitment={int(period)}"
-            + f"&loan_amount={int(loan_amount)}"
-            + f"&value_of_the_estate={int(asset_value)}"
-            + "&ica_spend_amount=0"
-        )
-
-    def generate_scrape_urls(self) -> Tuple[List[str], List[MortgageMarketSegment]]:
-        """Formats scraping urls based off of the default market segments"""
-        segments = []
-        periods = [3, 12, 36, 60]
-        for period in periods:            
-            segments.extend(generate_segments(period))        
-        urls = [
-            self.get_scrape_url(s.period, s.loan_amount, s.asset_value) 
-            for s in segments
-        ]
-        return urls, segments
-
+    def get_auth_header(self) -> dict[str, str]:
+        if self.access_token_expired():
+            self.refresh_access_token()
+        return { "Authorization": f"Bearer {self.access_token}"}
 
     def get_access_token(self) -> str:
         """Retrieves an access token to be used for auth against api"""
-        request = { 
+        request: Dict[str, Union[Dict,str]] = { 
             "url": self.base_url + "/token/public",
         }
         if self.proxy and self.proxy_supports_https:
@@ -109,10 +96,37 @@ class IcaBankenScraper(AbstractScraper):
 
     def refresh_access_token(self):
         """Util for refreshing access token and saving it"""
+        self.token_last_updated_at = datetime.now()
         self.access_token = self.get_access_token()
 
+    def get_scrape_url(
+        self, 
+        period: Any,
+        loan_amount: Union[float,int],
+        asset_value: Union[float,int]
+    ) -> str:
+        return (
+            "https://apimgw-pub.ica.se/t/public.tenant/ica/bank/ac39/mortgage/1.0.0/interestproposal_v2_0?type_of_mortgage=BL"
+            + f"&period_of_commitment={int(period)}"
+            + f"&loan_amount={int(loan_amount)}"
+            + f"&value_of_the_estate={int(asset_value)}"
+            + "&ica_spend_amount=0"
+        )
+
+    def generate_scrape_urls(self) -> Tuple[List[str], List[MortgageMarketSegment]]:
+        """Formats scraping urls based off of the default market segments"""
+        segments: List[MortgageMarketSegment] = []
+        periods = [str(p) for p in [3, 12, 36, 60]]
+        for period in periods:            
+            segments.extend(generate_segments(period))
+        urls = [
+            self.get_scrape_url(s.period, s.loan_amount, s.asset_value) 
+            for s in segments
+        ]
+        return urls, segments
+
     async def fetch(self, session, url) -> IcaBankenResponse:
-        options: Dict[str, Union[dict,str]] = { "headers": self.auth_header }
+        options: Dict[str, Union[dict,str]] = { "headers": self.get_auth_header() }
         if self.proxy:
             options["proxy"] = self.proxy
         async with session.get(url, **options) as response:
