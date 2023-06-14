@@ -7,14 +7,16 @@ from datetime import datetime
 from src.base_sink import AbstractSink
 
 
-log = logging.getLogger(__file__)
+log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
 class CSVSink(AbstractSink):
     """A sink for exporting scraped data as .csv file"""
 
-    data_dir = str(pathlib.Path(os.path.dirname(os.path.realpath(__file__))).parent.resolve()) + "/data"
+    data_dir = str(pathlib.Path(
+        os.path.dirname(os.path.realpath(__file__))
+    ).parent.resolve()) + "/data"
 
     def export(self, df: pd.DataFrame, name: str):
         """Expects a named df"""
@@ -29,7 +31,7 @@ class CSVSink(AbstractSink):
         return f"{name}_mortgage_pricing_" + self.utc_timestamp() + ".csv"
 
     def utc_timestamp(self) -> str:
-        return datetime.now().strftime("%d_%m_%y")
+        return datetime.now().strftime("%d_%m_%y_%H:%M:%S")
 
     def __str__(self):
         return "CSVSink"

@@ -16,6 +16,11 @@ python3 -m venv venv && source venv/bin/activate && pip install -r requirements.
 
 # List all CLI options
 (venv) python main.py --help
+
+# Using proxy and sending a single request to each target
+(venv) python main.py -t ica,skandia,hypoteket,sbab -s csv \
+    --proxy user:pass@https://someproxy.idk \
+    --limit 1
 ```
 
 ### Project Structure
@@ -34,5 +39,16 @@ main.py         # cli entry point
 ### Tests
 
 ```bash
+# run all tests
 (venv) pytest
+
+# run only e2e
+(venv) pytest tests/test_e2e.py
+
+# run but avoid hitting a provider if you've been ip-banned/blocked
+(venv) pytest -k "not skandia"
+
+# NOTE: for E2E tests, some assumptions are made
+# - E2E tests require exec. rights on main.
+# - E2E test with proxy requires PROXY to be set to a valid forward proxy
 ```
