@@ -45,6 +45,9 @@ main.py         # cli entry point
 # run only e2e
 (venv) pytest tests/test_e2e.py
 
+# run but avoid hitting a provider if you've been ip-banned/blocked
+(venv) pytest -k "not skandia"
+
 # NOTE: for E2E tests, some assumptions are made
 # - E2E tests require exec. rights on main.
 # - E2E test with proxy requires PROXY to be set to a valid forward proxy
