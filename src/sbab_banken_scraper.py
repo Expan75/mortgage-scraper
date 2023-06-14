@@ -50,7 +50,11 @@ class SBABScraper(AbstractScraper):
         self.max_urls = max_urls
 
     
-    def get_scrape_url(self, loan_amount: int, estate_value: int) -> str:
+    def get_scrape_url(
+        self,
+        loan_amount: Union[float, int],
+        estate_value: Union[float, int]
+    ) -> str:
         """Formats a scrape url based of 2-dim pricing parameters"""
         return (
             self.base_url
