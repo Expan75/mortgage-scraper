@@ -17,13 +17,6 @@ log = logging.getLogger(__name__)
 
 
 @dataclass
-class QueryParameterPair:
-    """Capture the parameters queried with"""
-    loan_amount: float
-    asset_value: float
-
-
-@dataclass
 class SBABResponse:
     """Response payload following successful API call"""
     LoptidText: str

@@ -1,3 +1,4 @@
+import time
 import logging
 import pandas as pd
 import requests
@@ -7,7 +8,7 @@ from dataclasses import dataclass, asdict
 
 from src.base_sink import AbstractSink
 from src.base_scraper import AbstractScraper
-
+from src.segment import MortgageMarketSegment, generate_segments
 
 log = logging.getLogger(__name__)
 
@@ -19,6 +20,14 @@ class RateListEntry:
     id: str # e.g. '3;4,41' # probably internal reference of some sort
     text: str # "Ordinarie ränta (1 år): 5,19%"
 
+    @property
+    def binding_period(self) -> str:
+        return self.id.split(";")[0]
+
+    @property
+    def housing_interest(self) -> str:
+        return self.id.split(";")[-1]
+
 
 @dataclass
 class RequestBody:
@@ -26,7 +35,7 @@ class RequestBody:
     bindingPeriod: int
     housingInterest: float
     loanVolume: float
-    price: float    
+    price: float
 
 
 @dataclass
@@ -88,24 +97,36 @@ class SkandiaBankenScraper(AbstractScraper):
 
     def generate_scrape_body(
             self, 
-            period: int, 
-            housing_interest: float, 
+            period: str, 
+            housing_interest: str, 
             loan_volume: int,
             price: int
-        ) -> RequestBody:
+    ) -> RequestBody:
         """As this API requires POSTs we opt for bodies instead of url parameters""" 
         return RequestBody(period, housing_interest, loan_volume, price)
 
     def generate_scrape_bodies(self) -> List[RequestBody]:
         """As this API requires POSTs we opt for bodies instead of url parameters"""
-        bodies = []
-        for key in self.parameter_matrix:
-            bindingPeriod, housingInterest = key.strip().split(";")
-            for loan_amount, asset_amount in self.parameter_matrix[key]:
-                body = self.generate_scrape_body(
-                    bindingPeriod, housingInterest, loan_amount, asset_amount
-                )
-                bodies.append(body)
+        period_entries_response = requests.get(
+            "https://www.skandia.se/epi-api/interests/mortgage"
+        ).json()
+        parsed_entries: List[RateListEntry] = [
+            RateListEntry(**res) for res in period_entries_response
+        ]
+        
+        bodies: List[RequestBody] = []
+        for entry in parsed_entries:
+            period_segments: List[MortgageMarketSegment] = generate_segments(
+                period=entry.binding_period
+            )
+            period_bodies = [
+                self.generate_scrape_body(
+                    entry.binding_period,
+                    entry.housing_interest,
+                    int(segment.loan_amount),
+                    int(segment.asset_value)
+                ) for segment in period_segments]
+            bodies.extend(period_segments)
 
         return bodies
 
@@ -129,6 +150,7 @@ class SkandiaBankenScraper(AbstractScraper):
             } 
         
         for i, (url, body) in enumerate(zip(urls, bodies)):
+            time.sleep(1)
             response = requests.post(url, asdict(body), **options)            
             code = response.status_code
             if i % 100 == 0:

@@ -1,3 +1,4 @@
+import time
 import logging
 from typing import (
     Any,
@@ -127,6 +128,7 @@ class IcaBankenScraper(AbstractScraper):
         return urls, segments
 
     async def fetch(self, session, url) -> IcaBankenResponse:
+        time.sleep(0.5)
         options: Dict[str, Union[dict,str]] = { "headers": self.get_auth_header() }
         if self.proxy:
             options["proxy"] = self.proxy
@@ -135,11 +137,11 @@ class IcaBankenScraper(AbstractScraper):
    
     async def fetch_urls(self, urls, event_loop):
         # max-concurrant cons limit is enforced by the api so we adapt
-        conn = aiohttp.TCPConnector(limit=5)
+        conn = aiohttp.TCPConnector(limit=1)
         async with aiohttp.ClientSession(connector=conn, loop=event_loop) as session:
             # gather needs to occur with spread operator or manually provide each arg!
-            results = tqdm.asyncio.tqdm.as_completed(
-                [await self.fetch(session=session, url=url) for url in urls]
+            results = await asyncio.gather(
+                *[self.fetch(session=session, url=url) for url in urls]
             )
             return results
 
