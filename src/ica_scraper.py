@@ -15,6 +15,7 @@ import aiohttp
 import asyncio
 import requests
 import pandas as pd
+import tqdm.asyncio
 
 from src.base_sink import AbstractSink
 from src.base_scraper import AbstractScraper
@@ -131,12 +132,14 @@ class IcaBankenScraper(AbstractScraper):
             options["proxy"] = self.proxy
         async with session.get(url, **options) as response:
             return await response.json()
-    
+   
     async def fetch_urls(self, urls, event_loop):
-        async with aiohttp.ClientSession(loop=event_loop) as session:
+        # max-concurrant cons limit is enforced by the api so we adapt
+        conn = aiohttp.TCPConnector(limit=5)
+        async with aiohttp.ClientSession(connector=conn, loop=event_loop) as session:
             # gather needs to occur with spread operator or manually provide each arg!
-            results = await asyncio.gather(
-                *[self.fetch(session=session, url=url) for url in urls]
+            results = tqdm.asyncio.tqdm.as_completed(
+                [await self.fetch(session=session, url=url) for url in urls]
             )
             return results
 
