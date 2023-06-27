@@ -149,21 +149,23 @@ class SkandiaBankenScraper(AbstractScraper):
            options["proxies"] = {
                 "https" if "https" in self.proxy else "http": self.proxy
             } 
-        
-        
-        for i, (url, body) in tqdm(enumerate(zip(urls, bodies))):
+
+        urls_bodies_pairs = list(zip(urls, bodies))
+        i = 0
+
+        for (url, body) in tqdm(urls_bodies_pairs):
             time.sleep(1)
-            response = requests.post(url, asdict(body), **options)            
-            code = response.status_code
-            responses.append(response)
+            response = requests.post(url, asdict(body), **options)
             
-            if code != 200:
+            if response.status_code != 200:
                 log.critical(f"request to Skandia yielded {code} response; adding request to backlog for retry")
                 url_to_retry = urls[i]
                 body_to_retry = bodies[i]
                 urls.append(url_to_retry)
                 urls.append(body_to_retry)
 
+            responses.append(response)
+            i += 1
 
         print(responses[0].text)
         serialized_data = [
