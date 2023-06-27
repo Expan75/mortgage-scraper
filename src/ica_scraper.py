@@ -16,7 +16,7 @@ import aiohttp
 import asyncio
 import requests
 import pandas as pd
-import tqdm.asyncio
+from tqdm import tqdm
 
 from src.base_sink import AbstractSink
 from src.base_scraper import AbstractScraper
@@ -152,8 +152,10 @@ class IcaBankenScraper(AbstractScraper):
             urls = urls[:self.max_urls]
         log.info(f"scraping {len(urls)} urls...")
         
-        loop = asyncio.get_event_loop()
-        responses = loop.run_until_complete(self.fetch_urls(urls, loop))
+        #loop = asyncio.get_event_loop()
+        #responses = loop.run_until_complete(self.fetch_urls(urls, loop))
+        responses = [requests.get(url) for url in tqdm(urls)]
+        responses = [r.json() for r in responses]
         serialized_responses = [
             IcaBankenResponse(**res["response"]) for res in responses
         ]

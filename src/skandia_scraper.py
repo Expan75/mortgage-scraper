@@ -6,6 +6,7 @@ from typing import Optional, Dict, List, Tuple, Union
 from itertools import product
 from dataclasses import dataclass, asdict
 
+from tqdm import tqdm
 from src.base_sink import AbstractSink
 from src.base_scraper import AbstractScraper
 from src.segment import MortgageMarketSegment, generate_segments
@@ -149,7 +150,7 @@ class SkandiaBankenScraper(AbstractScraper):
                 "https" if "https" in self.proxy else "http": self.proxy
             } 
         
-        for i, (url, body) in enumerate(zip(urls, bodies)):
+        for i, (url, body) in tqdm(enumerate(zip(urls, bodies))):
             time.sleep(1)
             response = requests.post(url, asdict(body), **options)            
             code = response.status_code
