@@ -154,7 +154,7 @@ class IcaBankenScraper(AbstractScraper):
         
         #loop = asyncio.get_event_loop()
         #responses = loop.run_until_complete(self.fetch_urls(urls, loop))
-        responses = [requests.get(url) for url in tqdm(urls)]
+        responses = [requests.get(url, headers=self.get_auth_header()) for url in tqdm(urls)]
         responses = [r.json() for r in responses]
         serialized_responses = [
             IcaBankenResponse(**res["response"]) for res in responses
