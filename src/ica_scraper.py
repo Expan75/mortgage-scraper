@@ -1,3 +1,4 @@
+import csv
 import time
 import logging
 from typing import (
@@ -10,7 +11,7 @@ from typing import (
 )
 from datetime import datetime, timedelta
 from itertools import product
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, fields
 
 import aiohttp
 import asyncio
@@ -136,16 +137,43 @@ class IcaBankenScraper(AbstractScraper):
         log.info(f"scraping {len(urls)} urls...")
         
         responses = []
-        for url in tqdm(urls):
-            time.sleep(0.5)
-            response = requests.get(url, headers=self.get_auth_header())
-             
-            if response.status_code == 405:
-                log.critical("status 405 despite refreshing token, retrying /w new token")
-                self.refresh_access_token()
+
+        with open("./ica.csv", "a+") as f:
+            cols = [f.name for f in fields(IcaBankenResponse)]
+            csv_writer = csv.DictWriter(f, cols)
+            csv_writer.writeheader()
+            for url in tqdm(urls):
+                time.sleep(0.5)
                 response = requests.get(url, headers=self.get_auth_header())
-             
-            responses.append(response.json())
+            
+                if response.status_code == 405:
+                    log.critical(
+                        "status 405 despite refreshing token, retrying /w new token"
+                    )
+                    self.refresh_access_token()
+                    response = requests.get(url, headers=self.get_auth_header())
+          
+                parsed_json = None
+                try:
+                    parsed_json = response.json()
+                except requests.exceptions.JSONDecodeError:
+                    log.info(
+                        f"could not unpack response for {url=}, skipping {response=}"
+                    )
+    
+                # seems certain bins are not answred at all, falling out of bounds
+                if ( 
+                    parsed_json.get("resmeta") is not None
+                    and "FELAKTIGA" in parsed_json["resmeta"].get("be_meddel", "")
+                ):
+                    log.info("yielded 'felaktiga parameterar' error code")
+                    log.info("skipping url", url)
+                else:
+                    serialized = IcaBankenResponse(**parsed_json["response"]) 
+                    csv_writer.writerow(asdict(serialized))
+                    responses.append(parsed_json)
+
+                f.flush()
 
         serialized_responses = [
             IcaBankenResponse(**res["response"]) for res in responses
