@@ -11,8 +11,11 @@ from src.skandia_scraper import SkandiaBankenScraper
 
 
 log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
-
+logging.basicConfig(filename="mortgage_scraper.log",
+                    filemode='a',
+                    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+                    datefmt='%H:%M:%S',
+                    level=logging.DEBUG)
 
 __all__ = ["cli"]
 
