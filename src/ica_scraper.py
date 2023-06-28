@@ -136,11 +136,9 @@ class IcaBankenScraper(AbstractScraper):
             urls = urls[:self.max_urls]
         log.info(f"scraping {len(urls)} urls...")
         
-        responses = []
-
         with open("./ica.csv", "a+") as f:
             cols = [f.name for f in fields(IcaBankenResponse)]
-            csv_writer = csv.DictWriter(f, cols)
+            csv_writer = csv.DictWriter(f, [*cols, "url"])
             csv_writer.writeheader()
             for url in tqdm(urls):
                 time.sleep(0.5)
@@ -170,28 +168,9 @@ class IcaBankenScraper(AbstractScraper):
                     log.info("skipping url", url)
                 else:
                     serialized = IcaBankenResponse(**parsed_json["response"]) 
-                    csv_writer.writerow(asdict(serialized))
-                    responses.append(parsed_json)
-
+                    csv_writer.writerow({ **asdict(serialized), "url": url })
                 f.flush()
-
-        serialized_responses = [
-            IcaBankenResponse(**res["response"]) for res in responses
-        ]
-        exportable_records = [
-            { **asdict(serialized), **asdict(segments[i])} 
-            for i, serialized in enumerate(serialized_responses) 
-        ]
-
-        export_df = pd.DataFrame.from_records(exportable_records)
         
-        log.info(f"Successfully scraped {len(export_df)}")
-        log.info(f"exporting {self.sinks}")
-
-        for s in self.sinks:
-            log.info(f"exporting to {s}")
-            s.export(export_df, name=self.provider)
-
     def __str__(self):
         return "IcaBankenScraper"
 
