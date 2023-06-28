@@ -1,3 +1,4 @@
+import sys
 import logging
 import argparse
 from typing import List, Dict, Optional, Union, Any
@@ -10,12 +11,24 @@ from src.sbab_banken_scraper import SBABScraper
 from src.skandia_scraper import SkandiaBankenScraper
 
 
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(message)s')
+
+stdout_handler = logging.StreamHandler(sys.stdout)
+stdout_handler.setLevel(logging.DEBUG)
+stdout_handler.setFormatter(formatter)
+
+file_handler = logging.FileHandler('mortgage_scraper.log')
+file_handler.setLevel(logging.DEBUG)
+file_handler.setFormatter(formatter)
+
+
+logger.addHandler(file_handler)
+logger.addHandler(stdout_handler)
+
 log = logging.getLogger(__name__)
-logging.basicConfig(filename="mortgage_scraper.log",
-                    filemode='a',
-                    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
-                    datefmt='%H:%M:%S',
-                    level=logging.DEBUG)
+
 
 __all__ = ["cli"]
 
