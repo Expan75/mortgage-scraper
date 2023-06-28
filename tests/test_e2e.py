@@ -1,5 +1,7 @@
 import os
 import subprocess
+import pandas as pd
+
 from src.cli import VERSION
 from pathlib import Path
 
@@ -27,8 +29,29 @@ def test_should_run_single_provider_with_limit(entrypoint: str, project_dir: Pat
         "--store", "csv", 
         "--limit", "1"
     ])
+    
     assert result.returncode == 0, "should exit without error code"
-    assert len(os.listdir(data_dir)) > len(files), "test run did not yield stored csv"
+    added_files = list(set(os.listdir(data_dir)) - set(files))
+    assert len(added_files) == 1, "test run did not yield stored csv" 
+    df = pd.read_csv(os.path.join(data_dir, added_files[0])) 
+    assert not df.empty, "no data in csv"
+
+
+def test_should_scrape_hypoteket(entrypoint: str, project_dir: Path):
+    data_dir = os.path.join(project_dir, "data")
+    files = os.listdir(data_dir)
+    result = subprocess.run([
+        "python3", entrypoint, 
+        "--target", "hypoteket", 
+        "--store", "csv", 
+        "--limit", "1"
+    ])
+
+    assert result.returncode == 0, "should exit without error code"
+    added_files = list(set(os.listdir(data_dir)) - set(files))
+    assert len(added_files) == 1, "test run did not yield stored csv" 
+    df = pd.read_csv(os.path.join(data_dir, added_files[0])) 
+    assert not df.empty, "no data in csv"
 
 
 def test_should_use_proxy_if_available(entrypoint: str, project_dir: Path):   
@@ -42,8 +65,12 @@ def test_should_use_proxy_if_available(entrypoint: str, project_dir: Path):
             "--limit", "1",
             "--proxy", proxy
         ])
+        
         assert result.returncode == 0, "should exit without error code"
-        assert len(os.listdir(data_dir)) > len(files), "test run did not store .csv"
+        added_files = list(set(os.listdir(data_dir)) - set(files))
+        assert len(added_files) == 1, "test run did not yield stored csv" 
+        df = pd.read_csv(os.path.join(data_dir, added_files[0])) 
+        assert not df.empty, "no data in csv"
 
 
 def test_should_scrape_hypoteket(entrypoint: str, project_dir: Path):
@@ -55,8 +82,12 @@ def test_should_scrape_hypoteket(entrypoint: str, project_dir: Path):
         "--store", "csv", 
         "--limit", "1"
     ])
+
     assert result.returncode == 0, "should exit without error code"
-    assert len(os.listdir(data_dir)) > len(files), "test run did not yield stored csv"
+    added_files = list(set(os.listdir(data_dir)) - set(files))
+    assert len(added_files) == 1, "test run did not yield stored csv" 
+    df = pd.read_csv(os.path.join(data_dir, added_files[0])) 
+    assert not df.empty, "no data in csv"
 
 
 
@@ -69,8 +100,12 @@ def test_should_scrape_ica(entrypoint: str, project_dir: Path):
         "--store", "csv", 
         "--limit", "1"
     ])
+    
     assert result.returncode == 0, "should exit without error code"
-    assert len(os.listdir(data_dir)) > len(files), "ica run did not yield stored csv"
+    added_files = list(set(os.listdir(data_dir)) - set(files))
+    assert len(added_files) == 1, "test run did not yield stored csv" 
+    df = pd.read_csv(os.path.join(data_dir, added_files[0])) 
+    assert not df.empty, "no data in csv"
 
 
 def test_should_scrape_sbab(entrypoint: str, project_dir: Path):
@@ -82,9 +117,12 @@ def test_should_scrape_sbab(entrypoint: str, project_dir: Path):
         "--store", "csv", 
         "--limit", "1"
     ])
+    
     assert result.returncode == 0, "should exit without error code"
-    assert len(os.listdir(data_dir)) > len(files), "test run did not yield stored csv"
-
+    added_files = list(set(os.listdir(data_dir)) - set(files))
+    assert len(added_files) == 1, "test run did not yield stored csv" 
+    df = pd.read_csv(os.path.join(data_dir, added_files[0])) 
+    assert not df.empty, "no data in csv"
 
 
 def test_should_scrape_skandia(entrypoint: str, project_dir: Path):
@@ -97,5 +135,8 @@ def test_should_scrape_skandia(entrypoint: str, project_dir: Path):
         "--limit", "1"
     ])
     assert result.returncode == 0, "should exit without error code"
-    assert len(os.listdir(data_dir)) > len(files), "test run did not yield stored csv"
+    added_files = list(set(os.listdir(data_dir)) - set(files))
+    assert len(added_files) == 1, "test run did not yield stored csv" 
+    df = pd.read_csv(os.path.join(data_dir, added_files[0])) 
+    assert not df.empty, "no data in csv"
 

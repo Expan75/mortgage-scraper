@@ -72,13 +72,14 @@ class IcaBankenScraper(AbstractScraper):
     @property
     def proxy_supports_basic_auth(self) -> bool:
         return len(self.proxy.split(":")[0].split("@")) > 1
-   
+    
+    @property
     def access_token_expired(self) -> bool: 
         token_expiry_date = self.token_last_updated_at + timedelta(minutes=1) 
         return datetime.now() > token_expiry_date
 
     def get_auth_header(self) -> dict[str, str]:
-        if self.access_token_expired():
+        if self.access_token_expired:
             self.refresh_access_token()
         return { "Authorization": f"Bearer {self.access_token}"}
 
@@ -127,24 +128,6 @@ class IcaBankenScraper(AbstractScraper):
         ]
         return urls, segments
 
-    async def fetch(self, session, url) -> IcaBankenResponse:
-        time.sleep(0.5)
-        options: Dict[str, Union[dict,str]] = { "headers": self.get_auth_header() }
-        if self.proxy:
-            options["proxy"] = self.proxy
-        async with session.get(url, **options) as response:
-            return await response.json()
-   
-    async def fetch_urls(self, urls, event_loop):
-        # max-concurrant cons limit is enforced by the api so we adapt
-        conn = aiohttp.TCPConnector(limit=1)
-        async with aiohttp.ClientSession(connector=conn, loop=event_loop) as session:
-            # gather needs to occur with spread operator or manually provide each arg!
-            results = await asyncio.gather(
-                *[self.fetch(session=session, url=url) for url in urls]
-            )
-            return results
-
     def run_scraping_job(self):
         """Manages the actual scraping job, exporting to each sink and so on"""
         urls, segments = self.generate_scrape_urls()
@@ -152,13 +135,16 @@ class IcaBankenScraper(AbstractScraper):
             urls = urls[:self.max_urls]
         log.info(f"scraping {len(urls)} urls...")
         
-        #loop = asyncio.get_event_loop()
-        #responses = loop.run_until_complete(self.fetch_urls(urls, loop))
-
         responses = []
         for url in tqdm(urls):
             time.sleep(0.5)
             response = requests.get(url, headers=self.get_auth_header())
+             
+            if response.status_code == 405:
+                log.critical("status 405 despite refreshing token, retrying /w new token")
+                self.refresh_access_token()
+                response = requests.get(url, headers=self.get_auth_header())
+             
             responses.append(response.json())
 
         serialized_responses = [
