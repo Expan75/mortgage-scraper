@@ -13,13 +13,13 @@ from mortgage_scraper.scraper_config import ScraperConfig
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(message)s')
+formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
 
 stdout_handler = logging.StreamHandler(sys.stdout)
 stdout_handler.setLevel(logging.DEBUG)
 stdout_handler.setFormatter(formatter)
 
-file_handler = logging.FileHandler('mortgage_scraper.log')
+file_handler = logging.FileHandler("mortgage_scraper.log")
 file_handler.setLevel(logging.DEBUG)
 file_handler.setFormatter(formatter)
 
@@ -54,23 +54,22 @@ INVALID_SCRAPER_MESSAGE = f"""
 """
 
 
-
 def cli():
     parser = argparse.ArgumentParser(
-        prog = "Mortgage Scraper",
-        description = "Scrapes mortgage providers for their pricing structure",
-        epilog = "Author: Erik Håkansson",
+        prog="Mortgage Scraper",
+        description="Scrapes mortgage providers for their pricing structure",
+        epilog="Author: Erik Håkansson",
     )
     parser.add_argument("-t", "--target", required=True)
     parser.add_argument("-s", "--store", required=True)
     parser.add_argument("-d", "--debug", action="store_true", default=False)
     parser.add_argument("-v", "--version", action="version", version=VERSION)
-    parser.add_argument("-l", "--limit", default=None, type=int) 
+    parser.add_argument("-l", "--limit", default=None, type=int)
     parser.add_argument("-p", "--proxy", default="", type=str)
     args = parser.parse_args()
     args.targets = [t.lower().strip() for t in args.target.split(",")]
     args.sinks = [t.lower().strip() for t in args.store.split(",")]
- 
+
     return args
 
 
@@ -87,7 +86,7 @@ def find_matching_scrapers(selected_targets: List[str]) -> Set[str]:
 
 
 def setup_scraper(
-        scraper: str, sinks: List[str], config: ScraperConfig
+    scraper: str, sinks: List[str], config: ScraperConfig
 ) -> AbstractScraper:
     log.info(f"settings sinks with namespace: {scraper}")
     scraper_sinks = [IMPLEMENTED_SINKS[s](namespace=scraper) for s in sinks]
@@ -95,13 +94,13 @@ def setup_scraper(
 
 
 def setup_scrapers(
-        selected_scrapers: List[str],
-        selected_sinks: List[str],
-        config: ScraperConfig,
-    ) -> List[AbstractScraper]:
+    selected_scrapers: List[str],
+    selected_sinks: List[str],
+    config: ScraperConfig,
+) -> List[AbstractScraper]:
     """Creates ready to go scraper objects"""
     return [setup_scraper(s, selected_sinks, config) for s in selected_scrapers]
-     
+
 
 def main():
     """Main Entrypoint of scraper CLI tool"""
@@ -109,7 +108,7 @@ def main():
     args = cli()
     if args.debug is True:
         logging.basicConfig(level=logging.DEBUG)
-    
+
     config = ScraperConfig(debug=args.debug, max_urls=args.limit, proxy=args.proxy)
     selected_sinks = find_matching_sinks(args.sinks)
     selected_scrapers = find_matching_scrapers(args.targets)

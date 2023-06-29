@@ -2,10 +2,8 @@ from typing import Union, List, Dict, Optional
 from pydantic.dataclasses import dataclass
 
 
-
 @dataclass
-class ScraperConfig():
-
+class ScraperConfig:
     # https://someproxy.com
     proxy: str = ""
 

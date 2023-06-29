@@ -17,7 +17,8 @@ log = logging.getLogger(__name__)
 @dataclass
 class HypoteketResponse:
     """Response payload following successful API call"""
-    interestTerm: str # one of "threeMonth" | "oneYear" | "threeYear" | "fiveYear"
+
+    interestTerm: str  # one of "threeMonth" | "oneYear" | "threeYear" | "fiveYear"
     rate: float
     effectiveInterestRate: float
     validFrom: datetime.datetime
@@ -36,10 +37,10 @@ class HypoteketScraper(AbstractScraper):
     base_url = "https://api.hypoteket.com/api/v1"
 
     def __init__(
-        self,        
+        self,
         sinks: List[AbstractSink],
         config: ScraperConfig,
-     ):
+    ):
         self.sinks = sinks
         self.config = config
 
@@ -50,43 +51,39 @@ class HypoteketScraper(AbstractScraper):
             for segment in generate_segments()
         ]
         return urls
-    
+
     def get_scrape_url(self, loan_amount: int, estate_value: int) -> str:
         return (
-            f"{self.base_url}" 
+            f"{self.base_url}"
             + "/loans/interestRates"
             + f"?propertyValue={estate_value}&loanSize={loan_amount}"
         )
 
     def run_scraping_job(self):
-        """Manages the actual scraping job, exporting to each sink and so on""" 
+        """Manages the actual scraping job, exporting to each sink and so on"""
         urls = self.generate_scrape_urls()
         if self.config.max_urls is not None:
-            urls = urls[:self.config.max_urls]
+            urls = urls[: self.config.max_urls]
         log.info(f"scraping {len(urls)} urls...")
 
         # given aggresive rate-limiting, defer to synchronous requests
-        request_options = { 
-            "headers": { "Content-Type": "application/json" }
-        }
+        request_options = {"headers": {"Content-Type": "application/json"}}
         if self.config.proxy:
             protocol = "http" if "https" not in self.config.proxy else "https"
-            request_options["proxies"] = { protocol: self.config.proxy }
+            request_options["proxies"] = {protocol: self.config.proxy}
 
         for url in tqdm(urls):
             response = requests.get(url, **request_options)
-    
+
             if response.status_code != 200:
                 log.critical(f"Hypoteket requests yield {response.status_code}")
             try:
-                parsed = response.json() 
+                parsed = response.json()
                 records = [
-                    {
-                        **asdict(HypoteketResponse(**period)), 
-                        "url": url 
-                    } for period in parsed
+                    {**asdict(HypoteketResponse(**period)), "url": url}
+                    for period in parsed
                 ]
-            
+
                 for sink in self.sinks:
                     for record in records:
                         sink.write(record)
@@ -96,7 +93,7 @@ class HypoteketScraper(AbstractScraper):
             except NameError as e:
                 print(e)
                 log.critical(f"could not parse entries in json body: {response.json()}")
-       
+
         # TODO: this is ugly
         for sink in self.sinks:
             sink.close()

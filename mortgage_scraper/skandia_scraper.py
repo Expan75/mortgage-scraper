@@ -14,12 +14,12 @@ from mortgage_scraper.scraper_config import ScraperConfig
 log = logging.getLogger(__name__)
 
 
-
 @dataclass
 class RateListEntry:
     """Represents high level mortgage rate listed on /mortgage"""
-    id: str # e.g. '3;4,41' # probably internal reference of some sort
-    text: str # "Ordinarie ränta (1 år): 5,19%"
+
+    id: str  # e.g. '3;4,41' # probably internal reference of some sort
+    text: str  # "Ordinarie ränta (1 år): 5,19%"
 
     @property
     def binding_period(self) -> str:
@@ -42,6 +42,7 @@ class RequestBody:
 @dataclass
 class SkandiaBankenResponse:
     """Response payload following successful API call"""
+
     AmortizePercentage: float
     AmortizeAmount: float
     Discount: float
@@ -77,11 +78,11 @@ class SkandiaBankenScraper(AbstractScraper):
         self.sinks = sinks
         self.config = config
         self.session = requests.Session()
-        self.session.headers.update({ "Content-type": "application/json" })
-        
+        self.session.headers.update({"Content-type": "application/json"})
+
         if config.proxy:
             protocol = "https" if "https" in config.proxy else "http"
-            self.session.proxies.update({ protocol: config.proxy })
+            self.session.proxies.update({protocol: config.proxy})
 
     def generate_parameter_matrix(self):
         """
@@ -91,23 +92,19 @@ class SkandiaBankenScraper(AbstractScraper):
         housing_interest: List[RateListEntry] = [
             RateListEntry(**entry) for entry in data
         ]
-        loan_amount_bins = [100_000 * i for i in range(1,101)] # min 100k max 10 mil.
-        asset_value_bins = [100_000 * i for i in range(1,101)] # min 100k max 10 mil.
+        loan_amount_bins = [100_000 * i for i in range(1, 101)]  # min 100k max 10 mil.
+        asset_value_bins = [100_000 * i for i in range(1, 101)]  # min 100k max 10 mil.
         combinations_of_bins = product(loan_amount_bins, asset_value_bins)
 
         return {
-            rate_list_entry.id: combinations_of_bins 
+            rate_list_entry.id: combinations_of_bins
             for rate_list_entry in housing_interest
         }
 
     def generate_scrape_body(
-            self, 
-            period: str, 
-            housing_interest: str, 
-            loan_volume: int,
-            price: int
+        self, period: str, housing_interest: str, loan_volume: int, price: int
     ) -> RequestBody:
-        """As this API requires POSTs we opt for bodies instead of url parameters""" 
+        """As this API requires POSTs we opt for bodies instead of url parameters"""
         return RequestBody(period, housing_interest, loan_volume, price)
 
     def generate_scrape_bodies(self) -> List[RequestBody]:
@@ -118,7 +115,7 @@ class SkandiaBankenScraper(AbstractScraper):
         parsed_entries: List[RateListEntry] = [
             RateListEntry(**res) for res in period_entries_response
         ]
-        
+
         bodies: List[RequestBody] = []
         for entry in parsed_entries:
             period_segments: List[MortgageMarketSegment] = generate_segments(
@@ -129,30 +126,31 @@ class SkandiaBankenScraper(AbstractScraper):
                     entry.binding_period,
                     entry.housing_interest,
                     int(segment.loan_amount),
-                    int(segment.asset_value)
-                ) for segment in period_segments]
+                    int(segment.asset_value),
+                )
+                for segment in period_segments
+            ]
             bodies.extend(period_bodies)
 
         return bodies
 
     def run_scraping_job(self) -> None:
         """Manages the actual scraping job, exporting to each sink and so on"""
-        bodies = self.generate_scrape_bodies() # params here
-    
+        bodies = self.generate_scrape_bodies()  # params here
+
         urls = ["https://www.skandia.se/papi/mortgage/v2.0/discounts" for _ in bodies]
         if self.config.max_urls is not None:
-            urls = urls[:self.config.max_urls]
- 
+            urls = urls[: self.config.max_urls]
+
         log.info(f"scraping {len(urls)} urls...")
         urls_bodies_pairs = list(zip(urls, bodies))
         urls_bodies_pairs_retry: List[Any] = []
 
-        for (url, body) in tqdm(urls_bodies_pairs):
-            
+        for url, body in tqdm(urls_bodies_pairs):
             # skandia has aggresive rate limiting
             time.sleep(1)
             response = self.session.post(url, asdict(body))
-            
+
             if response.status_code != 200:
                 log.critical(f"request to Skandia yielded {response.status_code}")
                 urls_bodies_pairs_retry.append((url, body))
@@ -160,8 +158,8 @@ class SkandiaBankenScraper(AbstractScraper):
                 try:
                     parsed = response.json()
                     serialized = SkandiaBankenResponse(**parsed)
-                    record = { **asdict(serialized), "url": url, **body }
-                    
+                    record = {**asdict(serialized), "url": url, **body}
+
                     for s in self.sinks:
                         s.write(record)
                 except requests.exceptions.JSONDecodeError as e:
@@ -184,19 +182,3 @@ class SkandiaBankenScraper(AbstractScraper):
 
     def __repr__(self):
         return str(self)
-
-
-
-
-
-
-
-    
-
-
-
-
-
-
-
-

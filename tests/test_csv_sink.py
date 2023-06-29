@@ -7,7 +7,6 @@ def test_sink_repr(csv_sink: CSVSink):
 
 
 def test_export(csv_sink: CSVSink, temp_dir):
-
     csv_sink.data_dir = temp_dir
     csv_sink.write({"point": 42})
 

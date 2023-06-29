@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 
 
 class AbstractSink(ABC):
-
     @abstractmethod
     def __init__(self, namespace: str):
         pass

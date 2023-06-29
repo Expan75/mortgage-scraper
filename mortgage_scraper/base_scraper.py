@@ -4,7 +4,6 @@ from mortgage_scraper.base_sink import AbstractSink
 
 
 class AbstractScraper(ABC):
-   
     @abstractmethod
     def __init__(self, sinks: AbstractSink, config: ScraperConfig):
         pass

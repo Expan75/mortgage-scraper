@@ -14,23 +14,21 @@ Record = Dict[str, Any]
 Records = List[Record]
 
 
-
-
 class CSVSink(AbstractSink):
     """
     A sink for exporting scraped data as .csv file
     Exports by provider and multiple providers are meant to share a single sink.
     """
 
-    data_dir = str(
-        pathlib.Path(os.path.dirname(os.path.realpath(__file__))).parent.resolve()
-    ) + "/data"
-
+    data_dir = (
+        str(pathlib.Path(os.path.dirname(os.path.realpath(__file__))).parent.resolve())
+        + "/data"
+    )
 
     def __init__(self, namespace: str):
         self.namespace = str
         self.filepath = self.get_export_filepath(namespace)
-    
+
         self.f = open(self.filepath, "w+")
         self.writer: Optional[csv.DictWriter] = None
 
@@ -38,17 +36,17 @@ class CSVSink(AbstractSink):
         if self.writer is None:
             self.writer = csv.DictWriter(self.f, fieldnames=record.keys())
             self.writer.writeheader()
-        self.writer.writerow(record) 
+        self.writer.writerow(record)
         self.f.flush()
         log.debug(f"wrote {record} to {self.filepath}")
 
     def close(self):
         log.debug("export to {self.filepath} done, closing file...")
         self.f.close()
-    
+
     @classmethod
     def get_export_filepath(cls, namespace) -> str:
-        filename = f"{namespace}_mortgage_pricing_" + cls.utc_timestamp()+".csv" 
+        filename = f"{namespace}_mortgage_pricing_" + cls.utc_timestamp() + ".csv"
         return os.path.join(cls.data_dir, filename)
 
     @staticmethod
@@ -60,7 +58,3 @@ class CSVSink(AbstractSink):
 
     def __repr__(self):
         return str(self)
-
-
-
-

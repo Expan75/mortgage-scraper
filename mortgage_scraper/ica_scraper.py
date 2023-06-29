@@ -1,14 +1,7 @@
 import csv
 import time
 import logging
-from typing import (
-    Any,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-    Union
-)
+from typing import Any, Dict, List, Optional, Tuple, Union
 from datetime import datetime, timedelta
 from dataclasses import dataclass, asdict
 
@@ -26,12 +19,13 @@ log = logging.getLogger(__name__)
 @dataclass
 class AccessTokenResponse:
     access_token: str
-    expires_in: int 
+    expires_in: int
 
 
 @dataclass
 class IcaBankenResponse:
     """Response payload following successful API call"""
+
     list_interest_rate: float
     list_amount: int
     risk_discount_interest_rate: float
@@ -53,22 +47,21 @@ class IcaBankenScraper(AbstractScraper):
     url_parameters: Optional[Dict[int, List[Tuple[int, int]]]] = None
     base_url = "https://www.icabanken.se/api"
     max_urls: Optional[int]
-   
+
     access_token: str
     token_last_updated_at: datetime
 
-    def __init__(self, sinks: List[AbstractSink], config: ScraperConfig): 
+    def __init__(self, sinks: List[AbstractSink], config: ScraperConfig):
         self.sinks = sinks
         self.config = config
         self.session = requests.Session()
-        self.session.headers.update({ "Content-type": "application/json" })
+        self.session.headers.update({"Content-type": "application/json"})
 
         if self.config.proxy:
             protocol = "https" if "https" in self.config.proxy else "http"
-            self.session.proxies.update({ protocol: self.config.proxy }) 
+            self.session.proxies.update({protocol: self.config.proxy})
 
         self.refresh_access_token()
-    
 
     def get_access_token(self) -> str:
         """Retrieves an access token to be used for auth against api"""
@@ -81,18 +74,18 @@ class IcaBankenScraper(AbstractScraper):
         """Util for refreshing access token and saving it"""
         token = self.get_access_token()
         self.token_last_updated_at = datetime.now()
-        self.session.headers.update({ "Authorization": f"Bearer {token}" })
+        self.session.headers.update({"Authorization": f"Bearer {token}"})
 
     @property
-    def access_token_expired(self) -> bool: 
-        token_expiry_date = self.token_last_updated_at + timedelta(minutes=2) 
+    def access_token_expired(self) -> bool:
+        token_expiry_date = self.token_last_updated_at + timedelta(minutes=2)
         return datetime.now() > token_expiry_date
 
     def get_scrape_url(
-        self, 
+        self,
         period: Any,
-        loan_amount: Union[float,int],
-        asset_value: Union[float,int]
+        loan_amount: Union[float, int],
+        asset_value: Union[float, int],
     ) -> str:
         return (
             "https://apimgw-pub.ica.se/t/public.tenant/ica/bank/ac39/mortgage/1.0.0/interestproposal_v2_0?type_of_mortgage=BL"
@@ -106,10 +99,10 @@ class IcaBankenScraper(AbstractScraper):
         """Formats scraping urls based off of the default market segments"""
         segments: List[MortgageMarketSegment] = []
         periods = [str(p) for p in [3, 12, 36, 60]]
-        for period in periods:            
+        for period in periods:
             segments.extend(generate_segments(period))
         urls = [
-            self.get_scrape_url(s.period, s.loan_amount, s.asset_value) 
+            self.get_scrape_url(s.period, s.loan_amount, s.asset_value)
             for s in segments
         ]
         return urls, segments
@@ -118,51 +111,33 @@ class IcaBankenScraper(AbstractScraper):
         """Manages the actual scraping job, exporting to each sink and so on"""
         urls, segments = self.generate_scrape_urls()
         if self.config.max_urls is not None:
-            urls = urls[:self.config.max_urls]
+            urls = urls[: self.config.max_urls]
         log.info(f"scraping {len(urls)} urls...")
-        
+
         urls_segments_pairs = list(zip(urls, segments))
-        for (url, segment) in tqdm(urls_segments_pairs):
+        for url, segment in tqdm(urls_segments_pairs):
             if self.access_token_expired:
                 self.refresh_access_token()
             time.sleep(0.3)
             response = self.session.get(url)
-            print(response)      
+            print(response)
             try:
                 parsed = response.json()
                 serialized = IcaBankenResponse(**parsed["response"])
-                record = { **asdict(serialized), **asdict(segment) , "url": url }
+                record = {**asdict(serialized), **asdict(segment), "url": url}
 
                 for s in self.sinks:
                     s.write(record)
-            
+
             except requests.exceptions.JSONDecodeError:
                 log.critical(f"could not parse json, skipping {url=}")
-        
-        
+
         log.info("finished scrape job")
         for s in self.sinks:
             s.close()
-
 
     def __str__(self):
         return "IcaBankenScraper"
 
     def __repr__(self):
         return str(self)
-
-
-
-
-
-
-
-    
-
-
-
-
-
-
-
-
