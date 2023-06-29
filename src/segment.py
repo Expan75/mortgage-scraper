@@ -18,7 +18,7 @@ class MortgageMarketSegment:
         return self.loan_amount / self.asset_value
 
 
-def generate_segments(period: str = None) -> Tuple[MortgageMarketSegment]:
+def generate_segments(period: str = None) -> List[MortgageMarketSegment]:
     """
     Determines the bins to be used for query formatting
 
@@ -40,7 +40,7 @@ def generate_segments(period: str = None) -> Tuple[MortgageMarketSegment]:
         in itertools.product(asset_value_bins, loan_amount_bins) 
     ]
 
-    return tuple(segments)
+    return segments
 
 
 if __name__ == "__main__":
