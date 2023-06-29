@@ -5,8 +5,10 @@ from itertools import product
 from typing import Union, Optional, List, Tuple
 from dataclasses import dataclass, asdict
 
+from tqdm import tqdm
 import requests
 
+from src.scraper_config import ScraperConfig
 from src.base_sink import AbstractSink
 from src.base_scraper import AbstractScraper
 from src.segment import MortgageMarketSegment, generate_segments
@@ -36,14 +38,12 @@ class HypoteketScraper(AbstractScraper):
     base_url = "https://api.hypoteket.com/api/v1"
 
     def __init__(
-        self, 
-        proxy: str,
+        self,        
         sinks: List[AbstractSink],
-        max_urls: Optional[int] = None
+        config: ScraperConfig,
      ):
-        self.max_urls = max_urls
         self.sinks = sinks
-        self.proxy = proxy
+        self.config = config
 
     def generate_scrape_urls(self) -> List[str]:
         """Formats scraping urls based off of generated segments matrix"""
@@ -63,44 +63,45 @@ class HypoteketScraper(AbstractScraper):
     def run_scraping_job(self):
         """Manages the actual scraping job, exporting to each sink and so on""" 
         urls = self.generate_scrape_urls()
-        if self.max_urls is not None:
-            urls = urls[:self.max_urls]
+        if self.config.max_urls is not None:
+            urls = urls[:self.config.max_urls]
         log.info(f"scraping {len(urls)} urls...")
 
         # given aggresive rate-limiting, defer to synchronous requests
-        responses = []
         request_options = { 
-            "headers": {"Content-Type": "application/json"}
+            "headers": { "Content-Type": "application/json" }
         }
-        if self.proxy:
-            protocol = "http" if "https" not in self.proxy else "https"
-            request_options["proxies"] = { protocol: self.proxy }
+        if self.config.proxy:
+            protocol = "http" if "https" not in self.config.proxy else "https"
+            request_options["proxies"] = { protocol: self.config.proxy }
 
-        for i, url in enumerate(urls):
-            res = requests.get(url, **request_options)
-            responses.append(res)
-            if res.status_code != 200:
-                log.critical(f"Hypoteket requests yield {res.status_code}")
-
-            if i % 100 == 0:
-                log.info(f"completed {i} of {len(urls)} scrapes")
-
-        serialized_data = []
-
-        for response in responses:
-            # resource expoesd like /<plural> resource and get multiple
-            parsed_response = response.json()
-            serialized_data.extend([HypoteketResponse(**e) for e in parsed_response])
+        for url in tqdm(urls):
+            response = requests.get(url, **request_options)
     
-        log.info(f"successfully uncpacked {len(urls)} requests")
-        export_df = pd.DataFrame.from_records(asdict(data) for data in serialized_data)
+            if response.status_code != 200:
+                log.critical(f"Hypoteket requests yield {response.status_code}")
+            try:
+                parsed = response.json() 
+                records = [
+                    {
+                        **asdict(HypoteketResponse(**period)), 
+                        "url": url 
+                    } for period in parsed
+                ]
+            
+                for sink in self.sinks:
+                    for record in records:
+                        sink.write(record)
 
-        log.info(f"Successfully scraped {len(export_df)}")
-        log.info(f"exporting to {self.sinks}")
-
-        for s in self.sinks:
-            log.info(f"exporting to {s}")
-            s.export(export_df, name=self.provider)
+            except requests.exceptions.JSONDecodeError:
+                log.critical("could not parse request body as valid json, skipping")
+            except NameError as e:
+                print(e)
+                log.critical(f"could not parse entries in json body: {response.json()}")
+       
+        # TODO: this is ugly
+        for sink in self.sinks:
+            sink.close()
 
     def __str__(self):
         return "HypoteketScraper"

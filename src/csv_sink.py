@@ -1,36 +1,58 @@
 import os
+import csv
 import logging
 import pathlib
-import pandas as pd
-
+from typing import Dict, List, Any, Optional
 from datetime import datetime
+
 from src.base_sink import AbstractSink
 
 
 log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+
+Record = Dict[str, Any]
+Records = List[Record]
+
+
 
 
 class CSVSink(AbstractSink):
-    """A sink for exporting scraped data as .csv file"""
+    """
+    A sink for exporting scraped data as .csv file
+    Exports by provider and multiple providers are meant to share a single sink.
+    """
 
-    data_dir = str(pathlib.Path(
-        os.path.dirname(os.path.realpath(__file__))
-    ).parent.resolve()) + "/data"
+    data_dir = str(
+        pathlib.Path(os.path.dirname(os.path.realpath(__file__))).parent.resolve()
+    ) + "/data"
 
-    def export(self, df: pd.DataFrame, name: str):
-        """Expects a named df"""
-        filepath = self.get_export_filepath(name)
-        log.info("saving to %s", filepath)
-        df.to_csv(filepath)
 
-    def get_export_filepath(self, name) -> str:
-        return os.path.join(self.data_dir, self.get_timestamped_filename(name))
+    def __init__(self, namespace: str):
+        self.namespace = str
+        self.filepath = self.get_export_filepath(namespace)
+    
+        self.f = open(self.filepath, "w+")
+        self.writer: Optional[csv.DictWriter] = None
 
-    def get_timestamped_filename(self, name: str = "competitor") -> str:
-        return f"{name}_mortgage_pricing_" + self.utc_timestamp() + ".csv"
+    def write(self, record: Dict):
+        if self.writer is None:
+            self.writer = csv.DictWriter(self.f, fieldnames=record.keys())
+            self.writer.writeheader()
+        self.writer.writerow(record) 
+        self.f.flush()
+        log.debug(f"wrote {record} to {self.filepath}")
 
-    def utc_timestamp(self) -> str:
+    def close(self):
+        log.debug("export to {self.filepath} done, closing file...")
+        self.f.close()
+    
+    @classmethod
+    def get_export_filepath(cls, namespace) -> str:
+        filename = f"{namespace}_mortgage_pricing_" + cls.utc_timestamp()+".csv" 
+        return os.path.join(cls.data_dir, filename)
+
+    @staticmethod
+    def utc_timestamp() -> str:
         return datetime.now().strftime("%d_%m_%y_%H:%M:%S")
 
     def __str__(self):

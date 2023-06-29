@@ -141,7 +141,7 @@ class IcaBankenScraper(AbstractScraper):
             csv_writer = csv.DictWriter(f, [*cols, "url"])
             csv_writer.writeheader()
             for url in tqdm(urls):
-                time.sleep(0.5)
+                time.sleep(0.2)
                 response = requests.get(url, headers=self.get_auth_header())
             
                 if response.status_code == 405:

@@ -1,7 +1,7 @@
 import sys
 import logging
 import argparse
-from typing import List, Dict, Optional, Union, Any
+from typing import List, Dict, Optional, Union, Set, Any
 from src.base_sink import AbstractSink
 from src.base_scraper import AbstractScraper
 from src.csv_sink import CSVSink
@@ -9,7 +9,7 @@ from src.ica_scraper import IcaBankenScraper
 from src.hypoteket_scraper import HypoteketScraper
 from src.sbab_banken_scraper import SBABScraper
 from src.skandia_scraper import SkandiaBankenScraper
-
+from src.scraper_config import ScraperConfig
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -54,6 +54,7 @@ INVALID_SCRAPER_MESSAGE = f"""
 """
 
 
+
 def cli():
     parser = argparse.ArgumentParser(
         prog = "Mortgage Scraper",
@@ -73,31 +74,34 @@ def cli():
     return args
 
 
-def setup_sinks(selected_sinks: List[str]) -> List[AbstractSink]:
-    """Creates the neccessary objects following CLI options"""
+def find_matching_sinks(selected_sinks: List[str]) -> Set[str]:
     matching_sinks = set(selected_sinks) & set(IMPLEMENTED_SINKS.keys())
     assert len(matching_sinks) > 0, INVALID_SINK_MESSAGE
-    return [IMPLEMENTED_SINKS[s]() for s in matching_sinks]
+    return matching_sinks
+
+
+def find_matching_scrapers(selected_targets: List[str]) -> Set[str]:
+    matching_targets = set(selected_targets) & set(IMPLEMENTED_SCRAPERS.keys())
+    assert len(matching_targets) > 0, INVALID_SCRAPER_MESSAGE
+    return matching_targets
+
+
+def setup_scraper(
+        scraper: str, sinks: List[str], config: ScraperConfig
+) -> AbstractScraper:
+    log.info(f"settings sinks with namespace: {scraper}")
+    scraper_sinks = [IMPLEMENTED_SINKS[s](namespace=scraper) for s in sinks]
+    return IMPLEMENTED_SCRAPERS[scraper](scraper_sinks, config)
 
 
 def setup_scrapers(
-    sinks: List[AbstractSink], 
-    selected_targets: List[str],
-    max_urls: Optional[int],
-    proxy: str
-) -> List[AbstractScraper]:
-    """Setups the selected scrapers based off of config"""
-    matching_targets = set(selected_targets) & set(IMPLEMENTED_SCRAPERS.keys())
-    assert len(matching_targets) > 0, INVALID_SCRAPER_MESSAGE
-    return [
-        IMPLEMENTED_SCRAPERS[t](
-            sinks=sinks,
-            max_urls=max_urls, 
-            proxy=proxy
-        ) 
-        for t in matching_targets
-    ]
-
+        selected_scrapers: List[str],
+        selected_sinks: List[str],
+        config: ScraperConfig,
+    ) -> List[AbstractScraper]:
+    """Creates ready to go scraper objects"""
+    return [setup_scraper(s, selected_sinks, config) for s in selected_scrapers]
+     
 
 def main():
     """Main Entrypoint of scraper CLI tool"""
@@ -105,20 +109,18 @@ def main():
     args = cli()
     if args.debug is True:
         logging.basicConfig(level=logging.DEBUG)
+    
+    config = ScraperConfig(debug=args.debug, max_urls=args.limit, proxy=args.proxy)
+    selected_sinks = find_matching_sinks(args.sinks)
+    selected_scrapers = find_matching_scrapers(args.targets)
 
-    initalised_sinks = setup_sinks(selected_sinks=args.sinks)
-    initalised_scrapers = setup_scrapers(
-        sinks=initalised_sinks, 
-        selected_targets=args.targets,
-        max_urls=args.limit,
-        proxy=args.proxy
-    )
+    scrapers = setup_scrapers(selected_scrapers, selected_sinks, config)
 
-    log.info(f"Selected data sinks: {initalised_sinks}")
-    log.info(f"Selected scraping targets: {initalised_scrapers}")
+    log.info(f"Selected data sinks: {selected_sinks}")
+    log.info(f"Selected scraping targets: {selected_scrapers}")
     log.info("Beginning scraping job...")
 
-    for scraper in initalised_scrapers:
+    for scraper in scrapers:
         scraper.run_scraping_job()
 
     log.info("Completed jobs, exiting...")

@@ -1,13 +1,13 @@
-from dataclasses import dataclass
 from abc import ABC, abstractmethod
-
-
-@dataclass
-class ScraperConfig:
-    proxy: str
+from src.scraper_config import ScraperConfig
+from src.base_sink import AbstractSink
 
 
 class AbstractScraper(ABC):
+   
+    @abstractmethod
+    def __init__(self, sinks: AbstractSink, config: ScraperConfig):
+        pass
 
     @abstractmethod
     def run_scraping_job(self):
