@@ -1,8 +1,9 @@
-name: "server-cicd"
+name: "scraper-cicd"
 on:
   push:
     paths:
-      - 'server/**'
+      - 'mortgage_scraper/**'
+      - 'tests/**'
 
 jobs:
   lint:
