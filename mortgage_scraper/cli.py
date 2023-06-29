@@ -1,8 +1,7 @@
 import sys
 import logging
 import argparse
-from typing import List, Dict, Optional, Union, Set, Any
-from mortgage_scraper.base_sink import AbstractSink
+from typing import List, Dict, Set, Any
 from mortgage_scraper.base_scraper import AbstractScraper
 from mortgage_scraper.csv_sink import CSVSink
 from mortgage_scraper.ica_scraper import IcaBankenScraper

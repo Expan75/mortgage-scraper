@@ -1,4 +1,3 @@
-import csv
 import time
 import logging
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -88,7 +87,7 @@ class IcaBankenScraper(AbstractScraper):
         asset_value: Union[float, int],
     ) -> str:
         return (
-            "https://apimgw-pub.ica.se/t/public.tenant/ica/bank/ac39/mortgage/1.0.0/interestproposal_v2_0?type_of_mortgage=BL"
+            "https://apimgw-pub.ica.se/t/public.tenant/ica/bank/ac39/mortgage/1.0.0/interestproposal_v2_0?type_of_mortgage=BL"  # noqa
             + f"&period_of_commitment={int(period)}"
             + f"&loan_amount={int(loan_amount)}"
             + f"&value_of_the_estate={int(asset_value)}"
