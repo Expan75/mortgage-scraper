@@ -119,7 +119,7 @@ class IcaBankenScraper(AbstractScraper):
                 self.refresh_access_token()
             time.sleep(0.3)
             response = self.session.get(url)
-            print(response)
+
             try:
                 parsed = response.json()
                 serialized = IcaBankenResponse(**parsed["response"])
