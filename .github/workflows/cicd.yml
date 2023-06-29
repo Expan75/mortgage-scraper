@@ -4,6 +4,7 @@ on:
     paths:
       - 'mortgage_scraper/**'
       - 'tests/**'
+      - 'conftest.py'
 
 jobs:
   lint:
