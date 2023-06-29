@@ -52,3 +52,15 @@ main.py         # cli entry point
 # - E2E tests require exec. rights on main.
 # - E2E test with proxy requires PROXY to be set to a valid forward proxy
 ```
+
+### Formatting and linting
+
+This project uses black8 and flake8 for linting. To run the same linter as applied in CI/CD, use:
+
+```bash
+(venv) python -m flake8 /mortgage_scraper
+
+# alt. run black auto formatter. This does not neccesarrily catch everything!
+(venv) python -m black ./
+```
+

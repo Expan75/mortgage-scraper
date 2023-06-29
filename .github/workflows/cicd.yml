@@ -1,0 +1,26 @@
+name: "scraper-cicd"
+on:
+  push:
+    paths:
+      - 'mortgage_scraper/**'
+      - 'tests/**'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - name: run-linting
+        run: pip install flake8 && cd server && python -m flake8 .
+
+  test:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - run: pip install -r ./server/requirements.txt # install all our dependencies for the project
+      - name: test
+        run: >
+          pytest -k "not skandia"
