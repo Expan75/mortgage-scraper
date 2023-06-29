@@ -20,7 +20,8 @@ def entrypoint(project_dir):
 
 @pytest.fixture
 def temp_dir():
-    return tempfile.gettempdir()
+    # github action runner needss speciawl directory
+    return os.getenv("RUNNER_TEMP", tempfile.gettempdir())
 
 
 @pytest.fixture
