@@ -5,7 +5,7 @@ import pytest
 import tempfile
 
 
-from src.csv_sink import CSVSink
+from mortgage_scraper.csv_sink import CSVSink
 
 
 @pytest.fixture
@@ -25,4 +25,4 @@ def temp_dir():
 
 @pytest.fixture
 def csv_sink():
-    return CSVSink()
+    return CSVSink(namespace="test")

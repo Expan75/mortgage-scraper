@@ -1,9 +1,5 @@
 import os
-import sys
-import tempfile
-import pytest
-import pandas as pd
-from src.csv_sink import CSVSink
+from mortgage_scraper.csv_sink import CSVSink
 
 
 def test_sink_repr(csv_sink: CSVSink):

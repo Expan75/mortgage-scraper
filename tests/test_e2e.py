@@ -2,7 +2,7 @@ import os
 import subprocess
 import pandas as pd
 
-from src.cli import VERSION
+from mortgage_scraper.cli import VERSION
 from pathlib import Path
 
 
