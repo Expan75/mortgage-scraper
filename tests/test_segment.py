@@ -16,6 +16,8 @@ def test_should_generate_segments():
 
         correct_ltv = segment.ltv == segment.loan_amount / segment.asset_value
         assert correct_ltv, "ltv ratio not sane"
+        assert segment.loan_amount >= 50_000
+        assert segment.asset_value >= 50_000
 
     assert len(unique_ltvs) > 1, "should have plenty of segments"
     assert len(unique_vols) > 1, "should have plenty of segments"

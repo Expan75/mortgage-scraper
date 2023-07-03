@@ -22,8 +22,3 @@ def entrypoint(project_dir):
 def temp_dir():
     # github action runner needss speciawl directory
     return os.getenv("RUNNER_TEMP", tempfile.gettempdir())
-
-
-@pytest.fixture
-def csv_sink():
-    return CSVSink(namespace="test")

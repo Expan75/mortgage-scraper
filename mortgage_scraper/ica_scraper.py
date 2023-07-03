@@ -122,6 +122,7 @@ class IcaBankenScraper(AbstractScraper):
 
             try:
                 parsed = response.json()
+                print(parsed)
                 serialized = IcaBankenResponse(**parsed["response"])
                 record = {**asdict(serialized), **asdict(segment), "url": url}
 
