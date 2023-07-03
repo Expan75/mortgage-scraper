@@ -117,14 +117,18 @@ class IcaBankenScraper(AbstractScraper):
         for url, segment in tqdm(urls_segments_pairs):
             if self.access_token_expired:
                 self.refresh_access_token()
-            time.sleep(0.3)
+            time.sleep(0.5)
             response = self.session.get(url)
 
             try:
                 parsed = response.json()
-                print(parsed)
                 serialized = IcaBankenResponse(**parsed["response"])
-                record = {**asdict(serialized), **asdict(segment), "url": url}
+                record = {
+                    "url": url,
+                    "scraped_at": datetime.now(),
+                    **asdict(serialized),
+                    **asdict(segment),
+                }
 
                 for s in self.sinks:
                     s.write(record)

@@ -1,6 +1,7 @@
 import time
 import logging
 import requests
+from datetime import datetime
 from typing import Optional, Dict, List, Tuple, Any
 from itertools import product
 from dataclasses import dataclass, asdict
@@ -158,7 +159,12 @@ class SkandiaBankenScraper(AbstractScraper):
                 try:
                     parsed = response.json()
                     serialized = SkandiaBankenResponse(**parsed)
-                    record = {**asdict(serialized), "url": url, **body}
+                    record = {
+                        "url": url,
+                        "scraped_at": datetime.now(),
+                        **asdict(serialized),
+                        **body,
+                    }
 
                     for s in self.sinks:
                         s.write(record)
