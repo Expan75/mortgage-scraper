@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass, asdict
 
@@ -50,7 +51,7 @@ class SBABScraper(AbstractScraper):
         """Formats scraping urls based off of generated parameter matrix"""
         segments = generate_segments()
         urls = [self.get_scrape_url(s.loan_amount, s.asset_value) for s in segments]
-        return (urls, segments)
+        return urls, segments
 
     async def fetch(self, session, url) -> dict:
         """Actual request sender; processes concurrently"""
@@ -85,7 +86,12 @@ class SBABScraper(AbstractScraper):
         for response, segment, url in zip(responses, segments, urls):
             serialized_data = [SBABResponse(**data) for data in response]
             for serialized in serialized_data:
-                record = {**asdict(serialized), **asdict(segment), "url": url}
+                record = {
+                    "url": url,
+                    "scraped_at": datetime.now(),
+                    **asdict(serialized),
+                    **asdict(segment),
+                }
                 for sink in self.sinks:
                     sink.write(record)
 

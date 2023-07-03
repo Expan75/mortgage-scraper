@@ -16,6 +16,10 @@ class MortgageMarketSegment:
     def ltv(self) -> float:
         return self.loan_amount / self.asset_value
 
+    @staticmethod
+    def calculate_asset_value(ltv: float, vol: float) -> float:
+        return 1 / (ltv / vol)
+
 
 def generate_segments(period: Optional[str] = None) -> List[MortgageMarketSegment]:
     """
@@ -32,7 +36,13 @@ def generate_segments(period: Optional[str] = None) -> List[MortgageMarketSegmen
     ltv_bins = np.arange(0.005, 1, 0.005)
 
     # infer asset values based off of this
-    asset_value_bins = 1 / (ltv_bins / loan_amount_bins)
+    # for some reason numpy causes underflow, so we rely on python builtin
+
+    asset_value_bins = [
+        MortgageMarketSegment.calculate_asset_value(ltv, vol)
+        for (ltv, vol) in itertools.product(loan_amount_bins, ltv_bins)
+    ]
+
     segments = [
         MortgageMarketSegment(asset_value, loan_amount, period)
         for asset_value, loan_amount in itertools.product(

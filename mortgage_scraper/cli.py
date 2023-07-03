@@ -11,7 +11,7 @@ from mortgage_scraper.skandia_scraper import SkandiaBankenScraper
 from mortgage_scraper.scraper_config import ScraperConfig
 
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
 
 stdout_handler = logging.StreamHandler(sys.stdout)
@@ -21,7 +21,6 @@ stdout_handler.setFormatter(formatter)
 file_handler = logging.FileHandler("mortgage_scraper.log")
 file_handler.setLevel(logging.DEBUG)
 file_handler.setFormatter(formatter)
-
 
 logger.addHandler(file_handler)
 logger.addHandler(stdout_handler)
