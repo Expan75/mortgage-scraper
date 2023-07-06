@@ -82,9 +82,8 @@ class SkandiaBankenScraper(AbstractScraper):
         self.session = requests.Session()
         self.session.headers.update({"Content-type": "application/json"})
 
-        if config.proxy:
-            protocol = "https" if "https" in config.proxy else "http"
-            self.session.proxies.update({protocol: config.proxy})
+        if self.config.proxies:
+            self.session.proxies.update(self.config.proxies_by_protocol)
 
     def generate_parameter_matrix(self):
         """
@@ -136,7 +135,7 @@ class SkandiaBankenScraper(AbstractScraper):
 
         bodies = bodies[: self.config.urls_limit]
 
-        if self.config.randomise_url_order:
+        if self.config.randomize_url_order:
             seed = (
                 self.config.seed
                 if self.config.seed is not None

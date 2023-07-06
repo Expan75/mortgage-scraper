@@ -44,9 +44,7 @@ class IcaBankenScraper(AbstractScraper):
     """Scraper for https://www.icabanken.se"""
 
     provider = "ica"
-    url_parameters: Optional[Dict[int, List[Tuple[int, int]]]] = None
     base_url = "https://www.icabanken.se/api"
-    max_urls: Optional[int]
 
     access_token: str
     token_last_updated_at: datetime
@@ -57,9 +55,8 @@ class IcaBankenScraper(AbstractScraper):
         self.session = requests.Session()
         self.session.headers.update({"Content-type": "application/json"})
 
-        if self.config.proxy:
-            protocol = "https" if "https" in self.config.proxy else "http"
-            self.session.proxies.update({protocol: self.config.proxy})
+        if self.config.proxies:
+            self.session.proxies.update(self.config.proxies_by_protocol)
 
         self.refresh_access_token()
 
