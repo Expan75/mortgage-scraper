@@ -1,4 +1,5 @@
 import time
+import random
 import logging
 from typing import Any, Dict, List, Optional, Tuple, Union
 from datetime import datetime, timedelta
@@ -100,6 +101,16 @@ class IcaBankenScraper(AbstractScraper):
         periods = [str(p) for p in [3, 12, 36, 60]]
         for period in periods:
             segments.extend(generate_segments(period))
+
+        segments = segments[: self.config.urls_limit]
+        if self.config.randomize_url_order:
+            seed = (
+                self.config.seed
+                if self.config.seed is not None
+                else random.randint(1, 1000)
+            )
+            random.Random(seed).shuffle(segments)
+
         urls = [
             self.get_scrape_url(s.period, s.loan_amount, s.asset_value)
             for s in segments
@@ -109,15 +120,14 @@ class IcaBankenScraper(AbstractScraper):
     def run_scraping_job(self):
         """Manages the actual scraping job, exporting to each sink and so on"""
         urls, segments = self.generate_scrape_urls()
-        if self.config.max_urls is not None:
-            urls = urls[: self.config.max_urls]
         log.info(f"scraping {len(urls)} urls...")
 
         urls_segments_pairs = list(zip(urls, segments))
         for url, segment in tqdm(urls_segments_pairs):
+            time.sleep(self.config.delay)
             if self.access_token_expired:
                 self.refresh_access_token()
-            time.sleep(0.5)
+
             response = self.session.get(url)
 
             try:

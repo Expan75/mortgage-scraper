@@ -1,4 +1,6 @@
+import time
 import logging
+import random
 from datetime import datetime
 from typing import Optional, List, Tuple
 from dataclasses import dataclass, asdict
@@ -46,13 +48,22 @@ class HypoteketScraper(AbstractScraper):
         self.session = requests.Session()
         self.session.headers.update({"Content-type": "application/json"})
 
-        if self.config.proxy:
-            protocol = "https" if "https" in self.config.proxy else "http"
-            self.session.proxies.update({protocol: self.config.proxy})
+        if config.proxies:
+            self.session.proxies.update(self.config.proxies_by_protocol)
 
     def generate_scrape_urls(self) -> Tuple[List[str], List[MortgageMarketSegment]]:
         """Formats scraping urls based off of generated segments matrix"""
         segments = generate_segments()
+        segments = segments[: self.config.urls_limit]
+
+        if self.config.randomize_url_order:
+            seed = (
+                self.config.seed
+                if self.config.seed is not None
+                else random.randint(1, 1000)
+            )
+            random.Random(seed).shuffle(segments)
+
         urls = [
             self.get_scrape_url(int(s.loan_amount), int(s.asset_value))
             for s in segments
@@ -69,12 +80,11 @@ class HypoteketScraper(AbstractScraper):
     def run_scraping_job(self):
         """Manages the actual scraping job, exporting to each sink and so on"""
         urls, segments = self.generate_scrape_urls()
-        if self.config.max_urls is not None:
-            urls = urls[: self.config.max_urls]
         log.info(f"scraping {len(urls)} urls...")
 
         url_segment_pairs = zip(urls, segments)
         for url, segment in tqdm(url_segment_pairs):
+            time.sleep(self.config.delay)
             response = self.session.get(url)
 
             if response.status_code != 200:

@@ -1,4 +1,5 @@
-from typing import Optional, Union, List, Dict
+from typing import Optional, List, Dict
+from pydantic import Field
 from pydantic.dataclasses import dataclass
 
 
@@ -8,7 +9,7 @@ class ScraperConfig:
     debug: bool = False
 
     # sleep between requests
-    delay: Optional[Union[int, float]] = None
+    delay: float = 0
 
     # intepretad as requests/second
     rate_limit: Optional[int] = None
@@ -17,22 +18,22 @@ class ScraperConfig:
     urls_limit: Optional[int] = None
 
     # send generated urls in a seeded randomised order
-    randomise_url_order: bool = False
-    randomise_url_seed: int = 42
+    randomize_url_order: bool = False
+    seed: int = 42
 
     # switches attached user agent in headers with provided List
     rotate_user_agent: bool = False
     user_agents_filepath: str = "../agents.txt"
 
-    # route requests via proxy
-    proxies: List[str] = []
+    # route requests via proxy, if multiple are given, uses round robin
+    proxies: Optional[List[str]] = Field(default_factory=list)
 
     @property
-    def proxies_by_protocol(self) -> Dict[str, List[str]]:
-        proxies: Dict[str, List[str]] = {"http": [], "https": []}
+    def proxies_by_protocol(self) -> Dict[str, str]:
+        proxies: Dict[str, str] = {}
         for proxy in self.proxies:
             protocol = "https" if "https" in proxy else "http"
-            proxies[protocol].append(proxy)
+            proxies[protocol] = proxy
         return proxies
 
     @property

@@ -1,3 +1,4 @@
+import random
 import logging
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple, Union
@@ -50,13 +51,21 @@ class SBABScraper(AbstractScraper):
     def generate_scrape_urls(self) -> Tuple[List[str], List[MortgageMarketSegment]]:
         """Formats scraping urls based off of generated parameter matrix"""
         segments = generate_segments()
+        if self.config.randomize_url_order:
+            seed = (
+                self.config.seed
+                if self.config.seed is not None
+                else random.randint(1, 1000)
+            )
+            random.Random(seed).shuffle(segments)
+        segments = segments[: self.config.urls_limit]
         urls = [self.get_scrape_url(s.loan_amount, s.asset_value) for s in segments]
         return urls, segments
 
     async def fetch(self, session, url) -> dict:
         """Actual request sender; processes concurrently"""
-        if self.config.proxy:
-            async with session.get(url, proxy=self.config.proxy) as response:
+        if self.config.proxies:
+            async with session.get(url, proxy=self.config.proxies[0]) as response:
                 return await response.json()
         else:
             async with session.get(url) as response:
@@ -73,12 +82,9 @@ class SBABScraper(AbstractScraper):
 
     def run_scraping_job(self):
         """Manages the actual scraping job, exporting to each sink and so on"""
-
         urls, segments = self.generate_scrape_urls()
-        if self.config.max_urls is not None:
-            urls = urls[: self.config.max_urls]
-
         log.info(f"scraping {len(urls)} urls...")
+        log.info("SBAB runs async and does not support delay, ignoring...")
 
         loop = asyncio.get_event_loop()
         responses = loop.run_until_complete(self.fetch_urls(urls, loop))

@@ -1,4 +1,5 @@
 import time
+import random
 import logging
 import requests
 from datetime import datetime
@@ -133,15 +134,22 @@ class SkandiaBankenScraper(AbstractScraper):
             ]
             bodies.extend(period_bodies)
 
+        bodies = bodies[: self.config.urls_limit]
+
+        if self.config.randomise_url_order:
+            seed = (
+                self.config.seed
+                if self.config.seed is not None
+                else random.randint(1, 1000)
+            )
+            random.Random(seed).shuffle(bodies)
+
         return bodies
 
     def run_scraping_job(self) -> None:
         """Manages the actual scraping job, exporting to each sink and so on"""
         bodies = self.generate_scrape_bodies()  # params here
-
         urls = ["https://www.skandia.se/papi/mortgage/v2.0/discounts" for _ in bodies]
-        if self.config.max_urls is not None:
-            urls = urls[: self.config.max_urls]
 
         log.info(f"scraping {len(urls)} urls...")
         urls_bodies_pairs = list(zip(urls, bodies))
@@ -149,7 +157,7 @@ class SkandiaBankenScraper(AbstractScraper):
 
         for url, body in tqdm(urls_bodies_pairs):
             # skandia has aggresive rate limiting
-            time.sleep(1)
+            time.sleep(self.config.delay)
             response = self.session.post(url, asdict(body))
 
             if response.status_code != 200:
