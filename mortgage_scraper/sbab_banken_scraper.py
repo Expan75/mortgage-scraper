@@ -1,12 +1,13 @@
+import time
 import random
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple, Union
+from typing import List, Tuple, Union
 from dataclasses import dataclass, asdict
 
-import aiohttp
-import asyncio
-from tqdm.asyncio import tqdm_asyncio
+import requests
+from tqdm import tqdm
+
 from mortgage_scraper.base_sink import AbstractSink
 from mortgage_scraper.base_scraper import AbstractScraper
 from mortgage_scraper.segment import MortgageMarketSegment, generate_segments
@@ -29,14 +30,14 @@ class SBABResponse:
 class SBABScraper(AbstractScraper):
     """Scraper for https://sbab.se"""
 
-    url_parameters: Optional[Dict[int, List[Tuple[int, int]]]] = None
-
     provider = "sbab"
     base_url = "https://www.sbab.se/www-open-rest-api"
 
     def __init__(self, sinks: List[AbstractSink], config: ScraperConfig):
         self.sinks = sinks
         self.config = config
+        self.session = requests.Session()
+        self.session.headers.update({"Content-type": "application/json"})
 
     def get_scrape_url(
         self, loan_amount: Union[float, int], estate_value: Union[float, int]
@@ -58,40 +59,20 @@ class SBABScraper(AbstractScraper):
                 else random.randint(1, 1000)
             )
             random.Random(seed).shuffle(segments)
-        urls = [
-            self.get_scrape_url(s.loan_amount, s.asset_value)
-            for s in segments[: self.config.urls_limit]
-        ]
+
+        segments = segments[: self.config.urls_limit]
+        urls = [self.get_scrape_url(s.loan_amount, s.asset_value) for s in segments]
         return urls, segments
-
-    async def fetch(self, session, url) -> dict:
-        """Actual request sender; processes concurrently"""
-        if self.config.proxies:
-            async with session.get(url, proxy=self.config.proxies[0]) as response:
-                return await response.json()
-        else:
-            async with session.get(url) as response:
-                return await response.json()
-
-    async def fetch_urls(self, urls, event_loop):
-        """Batches conccurent requests spread over the default conneciton poolsize"""
-        async with aiohttp.ClientSession(loop=event_loop) as session:
-            # gather needs to occur with spread operator or manually provide each arg!
-            results = await tqdm_asyncio.gather(
-                *[self.fetch(session=session, url=url) for url in urls]
-            )
-            return results
 
     def run_scraping_job(self):
         """Manages the actual scraping job, exporting to each sink and so on"""
         urls, segments = self.generate_scrape_urls()
         log.info(f"scraping {len(urls)} urls...")
-        log.info("SBAB runs async and does not support delay, ignoring...")
 
-        loop = asyncio.get_event_loop()
-        responses = loop.run_until_complete(self.fetch_urls(urls, loop))
-
-        for response, segment, url in zip(responses, segments, urls):
+        url_segment_pairs = zip(segments, urls)
+        for segment, url in tqdm(url_segment_pairs):
+            time.sleep(self.config.delay)
+            response = self.session.get(url).json()
             serialized_data = [SBABResponse(**data) for data in response]
             for serialized in serialized_data:
                 record = {

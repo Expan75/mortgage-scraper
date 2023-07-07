@@ -107,9 +107,10 @@ class IcaBankenScraper(AbstractScraper):
             )
             random.Random(seed).shuffle(segments)
 
+        segments = segments[: self.config.urls_limit]
         urls = [
             self.get_scrape_url(s.period, s.loan_amount, s.asset_value)
-            for s in segments[: self.config.urls_limit]
+            for s in segments
         ]
         return urls, segments
 

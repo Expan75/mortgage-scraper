@@ -2,7 +2,7 @@ import time
 import logging
 import random
 from datetime import datetime
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Union
 from dataclasses import dataclass, asdict
 
 import requests
@@ -54,7 +54,6 @@ class HypoteketScraper(AbstractScraper):
     def generate_scrape_urls(self) -> Tuple[List[str], List[MortgageMarketSegment]]:
         """Formats scraping urls based off of generated segments matrix"""
         segments = generate_segments()
-
         if self.config.randomize_url_order:
             seed = (
                 self.config.seed
@@ -63,17 +62,17 @@ class HypoteketScraper(AbstractScraper):
             )
             random.Random(seed).shuffle(segments)
 
-        urls = [
-            self.get_scrape_url(int(s.loan_amount), int(s.asset_value))
-            for s in segments[: self.config.urls_limit]
-        ]
+        segments = segments[: self.config.urls_limit]
+        urls = [self.get_scrape_url(s.loan_amount, s.asset_value) for s in segments]
         return urls, segments
 
-    def get_scrape_url(self, loan_amount: int, estate_value: int) -> str:
+    def get_scrape_url(
+        self, loan_amount: Union[int, float], estate_value: Union[int, float]
+    ) -> str:
         return (
             f"{self.base_url}"
             + "/loans/interestRates"
-            + f"?propertyValue={estate_value}&loanSize={loan_amount}"
+            + f"?propertyValue={int(estate_value)}&loanSize={int(loan_amount)}"
         )
 
     def run_scraping_job(self):
