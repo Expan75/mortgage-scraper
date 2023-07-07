@@ -80,7 +80,7 @@ class HypoteketScraper(AbstractScraper):
         urls, segments = self.generate_scrape_urls()
         log.info(f"scraping {len(urls)} urls...")
 
-        url_segment_pairs = zip(urls, segments)
+        url_segment_pairs = list(zip(urls, segments))
         for url, segment in tqdm(url_segment_pairs):
             time.sleep(self.config.delay)
             response = self.session.get(url)
