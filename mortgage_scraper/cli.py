@@ -73,13 +73,14 @@ def cli():
     parser.add_argument("-s", "--sink", nargs="*", required=True, type=str)
 
     # adv. settings
-    parser.add_argument("-r", "--rate-limit", default=None, type=int)
+    parser.add_argument("-l", "--rate-limit", default=None, type=int)
     parser.add_argument("-u", "--urls-limit", default=None, type=int)
     parser.add_argument("-p", "--proxies", nargs="*", type=str)
     parser.add_argument("-w", "--delay", default=0.0, type=float)
+
+    parser.add_argument("-r", "--randomize-order", action="store_true", default=False)
+    parser.add_argument("-a", "--rotate-user-agent", action="store_true", default=False)
     parser.add_argument("-e", "--seed", default=42, type=int)
-    parser.add_argument("-m", "--randomize-url-order", default=False, type=bool)
-    parser.add_argument("-a", "--rotate-user-agent", default=False, type=bool)
 
     # misc. cli
     parser.add_argument("-v", "--version", action="version", version=VERSION)
@@ -130,7 +131,7 @@ def main():
         delay=args.delay,
         rate_limit=args.rate_limit,
         urls_limit=args.urls_limit,
-        randomize_url_order=args.randomize_url_order,
+        randomize_url_order=args.randomize_order,
         randomize_url_seed=args.seed,
         proxies=args.proxies,
         rotate_user_agent=args.rotate_user_agent,
