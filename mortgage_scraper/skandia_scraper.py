@@ -76,7 +76,6 @@ class SkandiaBankenScraper(AbstractScraper):
         sinks: List[AbstractSink],
         config: ScraperConfig,
     ):
-        self.parameter_matrix = self.generate_parameter_matrix()
         self.sinks = sinks
         self.config = config
         self.session = requests.Session()
@@ -84,23 +83,6 @@ class SkandiaBankenScraper(AbstractScraper):
 
         if self.config.proxies:
             self.session.proxies.update(self.config.proxies_by_protocol)
-
-    def generate_parameter_matrix(self):
-        """
-        Generates a request parameter matrix for generating URLs
-        """
-        data = requests.get("https://www.skandia.se/epi-api/interests/mortgage").json()
-        housing_interest: List[RateListEntry] = [
-            RateListEntry(**entry) for entry in data
-        ]
-        loan_amount_bins = [100_000 * i for i in range(1, 101)]  # min 100k max 10 mil.
-        asset_value_bins = [100_000 * i for i in range(1, 101)]  # min 100k max 10 mil.
-        combinations_of_bins = product(loan_amount_bins, asset_value_bins)
-
-        return {
-            rate_list_entry.id: combinations_of_bins
-            for rate_list_entry in housing_interest
-        }
 
     def generate_scrape_body(
         self, period: str, housing_interest: str, loan_volume: int, price: int

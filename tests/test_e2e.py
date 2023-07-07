@@ -46,7 +46,7 @@ def test_should_run_single_provider_with_limit(entrypoint: str, project_dir: Pat
 def test_should_scrape_in_random_seeded_order(entrypoint: str, project_dir: Path):
     data_dir = os.path.join(project_dir, "data")
     files = os.listdir(data_dir)
-    runner = lambda: subprocess.run(
+    runner = lambda: subprocess.run(  # noqa
         [
             "python3",
             entrypoint,
