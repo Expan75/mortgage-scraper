@@ -84,6 +84,7 @@ class IcaBankenScraper(AbstractScraper):
         loan_amount: Union[float, int],
         asset_value: Union[float, int],
     ) -> str:
+        print(loan_amount)
         return (
             "https://apimgw-pub.ica.se/t/public.tenant/ica/bank/ac39/mortgage/1.0.0/interestproposal_v2_0?type_of_mortgage=BL"  # noqa
             + f"&period_of_commitment={int(period)}"
@@ -99,7 +100,6 @@ class IcaBankenScraper(AbstractScraper):
         for period in periods:
             segments.extend(generate_segments(period))
 
-        segments = segments[: self.config.urls_limit]
         if self.config.randomize_url_order:
             seed = (
                 self.config.seed
@@ -110,7 +110,7 @@ class IcaBankenScraper(AbstractScraper):
 
         urls = [
             self.get_scrape_url(s.period, s.loan_amount, s.asset_value)
-            for s in segments
+            for s in segments[: self.config.urls_limit]
         ]
         return urls, segments
 

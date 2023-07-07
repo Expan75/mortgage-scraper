@@ -58,8 +58,10 @@ class SBABScraper(AbstractScraper):
                 else random.randint(1, 1000)
             )
             random.Random(seed).shuffle(segments)
-        segments = segments[: self.config.urls_limit]
-        urls = [self.get_scrape_url(s.loan_amount, s.asset_value) for s in segments]
+        urls = [
+            self.get_scrape_url(s.loan_amount, s.asset_value)
+            for s in segments[: self.config.urls_limit]
+        ]
         return urls, segments
 
     async def fetch(self, session, url) -> dict:

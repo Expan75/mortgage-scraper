@@ -115,8 +115,6 @@ class SkandiaBankenScraper(AbstractScraper):
             ]
             bodies.extend(period_bodies)
 
-        bodies = bodies[: self.config.urls_limit]
-
         if self.config.randomize_url_order:
             seed = (
                 self.config.seed
@@ -125,7 +123,7 @@ class SkandiaBankenScraper(AbstractScraper):
             )
             random.Random(seed).shuffle(bodies)
 
-        return bodies
+        return bodies[: self.config.urls_limit]
 
     def run_scraping_job(self) -> None:
         """Manages the actual scraping job, exporting to each sink and so on"""

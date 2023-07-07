@@ -54,7 +54,6 @@ class HypoteketScraper(AbstractScraper):
     def generate_scrape_urls(self) -> Tuple[List[str], List[MortgageMarketSegment]]:
         """Formats scraping urls based off of generated segments matrix"""
         segments = generate_segments()
-        segments = segments[: self.config.urls_limit]
 
         if self.config.randomize_url_order:
             seed = (
@@ -66,7 +65,7 @@ class HypoteketScraper(AbstractScraper):
 
         urls = [
             self.get_scrape_url(int(s.loan_amount), int(s.asset_value))
-            for s in segments
+            for s in segments[: self.config.urls_limit]
         ]
         return urls, segments
 
