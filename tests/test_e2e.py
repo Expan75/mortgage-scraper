@@ -60,7 +60,6 @@ def test_should_run_single_provider_with_limit(entrypoint: str, project_dir: Pat
     assert len(added_files) == 1, "test run did not yield stored csv"
     df = get_latest_csv_dump(project_dir)
     assert not df.empty, "no data in csv"
-    assert False
 
 
 def test_random_order_should_mean_mixed_segments(entrypoint: str, project_dir: Path):
