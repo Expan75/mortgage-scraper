@@ -125,7 +125,11 @@ def test_should_scrape_in_random_seeded_order(entrypoint: str, data_dir: str):
     df2 = get_latest_csv_dump(data_dir)
     assert not df2.empty, "no data in csv"
     assert df1 is not df2
-    assert_frame_equal(df1, df2), "seeded runs did not equal one another"
+
+    excl_ts = [c for c in df1.columns if c != "scraped_at"]
+    assert_frame_equal(
+        df1[excl_ts], df2[excl_ts]
+    ), "seeded runs did not equal one another"
 
 
 def test_should_scrape_hypoteket(entrypoint: str, data_dir: str):
