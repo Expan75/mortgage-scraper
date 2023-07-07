@@ -18,8 +18,8 @@ def project_dir() -> pathlib.Path:
 def data_dir(project_dir) -> str:
     # always clean data dir upon very test run
     path = os.path.join(project_dir, "data")
-    shutil.rmtree(path)
-    os.makedirs(path)
+    shutil.rmtree(path, ignore_errors=True)
+    os.makedirs(path, exist_ok=False)
 
     return path
 

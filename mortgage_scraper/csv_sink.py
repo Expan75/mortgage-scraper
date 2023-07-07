@@ -26,6 +26,8 @@ class CSVSink(AbstractSink):
     )
 
     def __init__(self, namespace: str, ts_format: str):
+        os.makedirs(self.data_dir, exist_ok=True)
+
         self.namespace = str
         self.filepath = self.get_export_filepath(namespace, ts_format)
 
