@@ -2,10 +2,10 @@ import os
 import subprocess
 from datetime import datetime
 import pandas as pd
+from pandas.testing import assert_frame_equal
 from functools import cmp_to_key
 from mortgage_scraper.cli import VERSION
 from pathlib import Path
-
 
 DEFAULT_TS_FORMAT = "%Y-%m-%d-%H:%M:%S"
 
@@ -124,11 +124,8 @@ def test_should_scrape_in_random_seeded_order(entrypoint: str, data_dir: str):
     assert len(added_files) == 2, "test run did not yield stored csv"
     df2 = get_latest_csv_dump(data_dir)
     assert not df2.empty, "no data in csv"
-
-    print(df1)
-    print(df2)
-    assert (df1.all() == df2.all()).all(), "seeded runs did not equal one another"
     assert df1 is not df2
+    assert_frame_equal(df1, df2), "seeded runs did not equal one another"
 
 
 def test_should_scrape_hypoteket(entrypoint: str, data_dir: str):
