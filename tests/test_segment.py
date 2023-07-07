@@ -1,4 +1,4 @@
-from mortgage_scraper.segment import generate_segments, MortgageMarketSegment
+from mortgage_scraper.segment import generate_segments
 
 
 def test_should_generate_segments():

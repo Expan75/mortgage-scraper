@@ -1,8 +1,6 @@
-import random
 import itertools
 from typing import List, Optional
 from dataclasses import dataclass
-from mortgage_scraper.scraper_config import ScraperConfig
 import numpy as np
 
 
