@@ -1,8 +1,9 @@
 import time
+import random
 import logging
 import requests
+from datetime import datetime
 from typing import Optional, Dict, List, Tuple, Any
-from itertools import product
 from dataclasses import dataclass, asdict
 
 from tqdm import tqdm
@@ -74,32 +75,13 @@ class SkandiaBankenScraper(AbstractScraper):
         sinks: List[AbstractSink],
         config: ScraperConfig,
     ):
-        self.parameter_matrix = self.generate_parameter_matrix()
         self.sinks = sinks
         self.config = config
         self.session = requests.Session()
         self.session.headers.update({"Content-type": "application/json"})
 
-        if config.proxy:
-            protocol = "https" if "https" in config.proxy else "http"
-            self.session.proxies.update({protocol: config.proxy})
-
-    def generate_parameter_matrix(self):
-        """
-        Generates a request parameter matrix for generating URLs
-        """
-        data = requests.get("https://www.skandia.se/epi-api/interests/mortgage").json()
-        housing_interest: List[RateListEntry] = [
-            RateListEntry(**entry) for entry in data
-        ]
-        loan_amount_bins = [100_000 * i for i in range(1, 101)]  # min 100k max 10 mil.
-        asset_value_bins = [100_000 * i for i in range(1, 101)]  # min 100k max 10 mil.
-        combinations_of_bins = product(loan_amount_bins, asset_value_bins)
-
-        return {
-            rate_list_entry.id: combinations_of_bins
-            for rate_list_entry in housing_interest
-        }
+        if self.config.proxies:
+            self.session.proxies.update(self.config.proxies_by_protocol)
 
     def generate_scrape_body(
         self, period: str, housing_interest: str, loan_volume: int, price: int
@@ -132,15 +114,20 @@ class SkandiaBankenScraper(AbstractScraper):
             ]
             bodies.extend(period_bodies)
 
-        return bodies
+        if self.config.randomize_url_order:
+            seed = (
+                self.config.seed
+                if self.config.seed is not None
+                else random.randint(1, 1000)
+            )
+            random.Random(seed).shuffle(bodies)
+
+        return bodies[: self.config.urls_limit]
 
     def run_scraping_job(self) -> None:
         """Manages the actual scraping job, exporting to each sink and so on"""
         bodies = self.generate_scrape_bodies()  # params here
-
         urls = ["https://www.skandia.se/papi/mortgage/v2.0/discounts" for _ in bodies]
-        if self.config.max_urls is not None:
-            urls = urls[: self.config.max_urls]
 
         log.info(f"scraping {len(urls)} urls...")
         urls_bodies_pairs = list(zip(urls, bodies))
@@ -148,7 +135,7 @@ class SkandiaBankenScraper(AbstractScraper):
 
         for url, body in tqdm(urls_bodies_pairs):
             # skandia has aggresive rate limiting
-            time.sleep(1)
+            time.sleep(self.config.delay)
             response = self.session.post(url, asdict(body))
 
             if response.status_code != 200:
@@ -158,7 +145,12 @@ class SkandiaBankenScraper(AbstractScraper):
                 try:
                     parsed = response.json()
                     serialized = SkandiaBankenResponse(**parsed)
-                    record = {**asdict(serialized), "url": url, **body}
+                    record = {
+                        "url": url,
+                        "scraped_at": datetime.now().strftime(self.config.ts_format),
+                        **asdict(serialized),
+                        **body,
+                    }
 
                     for s in self.sinks:
                         s.write(record)

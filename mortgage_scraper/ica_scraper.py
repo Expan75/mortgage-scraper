@@ -1,6 +1,7 @@
 import time
+import random
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, List, Tuple, Union
 from datetime import datetime, timedelta
 from dataclasses import dataclass, asdict
 
@@ -43,9 +44,7 @@ class IcaBankenScraper(AbstractScraper):
     """Scraper for https://www.icabanken.se"""
 
     provider = "ica"
-    url_parameters: Optional[Dict[int, List[Tuple[int, int]]]] = None
     base_url = "https://www.icabanken.se/api"
-    max_urls: Optional[int]
 
     access_token: str
     token_last_updated_at: datetime
@@ -56,9 +55,8 @@ class IcaBankenScraper(AbstractScraper):
         self.session = requests.Session()
         self.session.headers.update({"Content-type": "application/json"})
 
-        if self.config.proxy:
-            protocol = "https" if "https" in self.config.proxy else "http"
-            self.session.proxies.update({protocol: self.config.proxy})
+        if self.config.proxies:
+            self.session.proxies.update(self.config.proxies_by_protocol)
 
         self.refresh_access_token()
 
@@ -100,30 +98,43 @@ class IcaBankenScraper(AbstractScraper):
         periods = [str(p) for p in [3, 12, 36, 60]]
         for period in periods:
             segments.extend(generate_segments(period))
+
+        if self.config.randomize_url_order:
+            seed = (
+                self.config.seed
+                if self.config.seed is not None
+                else random.randint(1, 1000)
+            )
+            random.Random(seed).shuffle(segments)
+
         urls = [
             self.get_scrape_url(s.period, s.loan_amount, s.asset_value)
-            for s in segments
+            for s in segments[: self.config.urls_limit]
         ]
         return urls, segments
 
     def run_scraping_job(self):
         """Manages the actual scraping job, exporting to each sink and so on"""
         urls, segments = self.generate_scrape_urls()
-        if self.config.max_urls is not None:
-            urls = urls[: self.config.max_urls]
         log.info(f"scraping {len(urls)} urls...")
 
         urls_segments_pairs = list(zip(urls, segments))
         for url, segment in tqdm(urls_segments_pairs):
+            time.sleep(self.config.delay)
             if self.access_token_expired:
                 self.refresh_access_token()
-            time.sleep(0.3)
+
             response = self.session.get(url)
 
             try:
                 parsed = response.json()
                 serialized = IcaBankenResponse(**parsed["response"])
-                record = {**asdict(serialized), **asdict(segment), "url": url}
+                record = {
+                    "url": url,
+                    "scraped_at": datetime.now().strftime(self.config.ts_format),
+                    **asdict(serialized),
+                    **asdict(segment),
+                }
 
                 for s in self.sinks:
                     s.write(record)

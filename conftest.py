@@ -1,5 +1,6 @@
 """Fixtures etc."""
 import os
+import shutil
 import pathlib
 import pytest
 import tempfile
@@ -13,8 +14,18 @@ def project_dir() -> pathlib.Path:
     return pathlib.Path(os.path.dirname(os.path.realpath(__file__)))
 
 
+@pytest.fixture()
+def data_dir(project_dir) -> str:
+    # always clean data dir upon very test run
+    path = os.path.join(project_dir, "data")
+    shutil.rmtree(path, ignore_errors=True)
+    os.makedirs(path, exist_ok=False)
+
+    return path
+
+
 @pytest.fixture
-def entrypoint(project_dir):
+def entrypoint(project_dir) -> str:
     return os.path.join(project_dir, "main.py")
 
 
@@ -22,8 +33,3 @@ def entrypoint(project_dir):
 def temp_dir():
     # github action runner needss speciawl directory
     return os.getenv("RUNNER_TEMP", tempfile.gettempdir())
-
-
-@pytest.fixture
-def csv_sink():
-    return CSVSink(namespace="test")

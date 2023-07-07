@@ -25,9 +25,11 @@ class CSVSink(AbstractSink):
         + "/data"
     )
 
-    def __init__(self, namespace: str):
+    def __init__(self, namespace: str, ts_format: str):
+        os.makedirs(self.data_dir, exist_ok=True)
+
         self.namespace = str
-        self.filepath = self.get_export_filepath(namespace)
+        self.filepath = self.get_export_filepath(namespace, ts_format)
 
         self.f = open(self.filepath, "w+")
         self.writer: Optional[csv.DictWriter] = None
@@ -45,13 +47,13 @@ class CSVSink(AbstractSink):
         self.f.close()
 
     @classmethod
-    def get_export_filepath(cls, namespace) -> str:
-        filename = f"{namespace}_mortgage_pricing_" + cls.utc_timestamp() + ".csv"
+    def get_export_filepath(cls, namespace: str, ts_format: str) -> str:
+        filename = (
+            f"{namespace}_mortgage_pricing_"
+            + datetime.now().strftime(ts_format)
+            + ".csv"
+        )
         return os.path.join(cls.data_dir, filename)
-
-    @staticmethod
-    def utc_timestamp() -> str:
-        return datetime.now().strftime("%d_%m_%y_%H:%M:%S")
 
     def __str__(self):
         return "CSVSink"

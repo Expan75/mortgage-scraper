@@ -8,20 +8,36 @@ python3 -m venv venv && source venv/bin/activate && pip install -r requirements.
 
 # scrape ica banken and export as .csv
 (venv) python main.py -t ica -s csv
-(venv) python main.py --target ica --store csv
+(venv) python main.py --target ica --sink csv
 
 # specifying multiple targets
-(venv) python main.py -t ica,skandia,hypoteket -t csv
-(venv) python main.py --target ica,skandia,hypoteket --store csv
+(venv) python main.py -t ica -t skandia -s csv
+(venv) python main.py --target ica --target skandia --store csv
 
 # List all CLI options
 (venv) python main.py --help
 
-# Using proxy and sending a single request to each target
-(venv) python main.py -t ica,skandia,hypoteket,sbab -s csv \
-    --proxy user:pass@https://someproxy.idk \
-    --limit 1
+# Run with debug logging
+(venv) python main.py -t ica -s csv -d
+(venv) python main.py --target ica -sink csv --debug
 ```
+
+### Advanced Options
+
+```bash
+# Using proxy and sending a single request 
+(venv) python main.py -t ica -s csv \
+    --proxy user:pass@https://someproxy.idk \
+    --urls-limit 1 \
+
+# Full scan but random order and rotatating user agent
+(venv) python main.py -t ica -s csv \
+    --randomise-url-order \
+    --seed 42 \ 
+    --rotate-user-agent
+
+```
+
 
 ### Project Structure
 
