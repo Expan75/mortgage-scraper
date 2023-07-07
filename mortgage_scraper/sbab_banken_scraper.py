@@ -72,7 +72,7 @@ class SBABScraper(AbstractScraper):
         url_segment_pairs = list(zip(segments, urls))
         for segment, url in tqdm(url_segment_pairs):
             time.sleep(self.config.delay)
-            response = self.session.get(url).json
+            response = self.session.get(url).json()
             serialized_data = [SBABResponse(**data) for data in response]
             for serialized in serialized_data:
                 record = {
