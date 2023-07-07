@@ -1,5 +1,6 @@
 """Fixtures etc."""
 import os
+import shutil
 import pathlib
 import pytest
 import tempfile
@@ -15,7 +16,12 @@ def project_dir() -> pathlib.Path:
 
 @pytest.fixture()
 def data_dir(project_dir) -> str:
-    return os.path.join(project_dir, "data")
+    # always clean data dir upon very test run
+    path = os.path.join(project_dir, "data")
+    shutil.rmtree(path)
+    os.makedirs(path)
+
+    return path
 
 
 @pytest.fixture
