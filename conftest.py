@@ -13,8 +13,13 @@ def project_dir() -> pathlib.Path:
     return pathlib.Path(os.path.dirname(os.path.realpath(__file__)))
 
 
+@pytest.fixture()
+def data_dir(project_dir) -> str:
+    return os.path.join(project_dir, "data")
+
+
 @pytest.fixture
-def entrypoint(project_dir):
+def entrypoint(project_dir) -> str:
     return os.path.join(project_dir, "main.py")
 
 

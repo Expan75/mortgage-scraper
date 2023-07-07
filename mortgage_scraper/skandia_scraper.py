@@ -147,7 +147,7 @@ class SkandiaBankenScraper(AbstractScraper):
                     serialized = SkandiaBankenResponse(**parsed)
                     record = {
                         "url": url,
-                        "scraped_at": datetime.now(),
+                        "scraped_at": datetime.now().strftime(self.config.ts_format),
                         **asdict(serialized),
                         **body,
                     }

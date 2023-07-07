@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Union
 from pydantic import Field
 from pydantic.dataclasses import dataclass
 
@@ -28,14 +28,18 @@ class ScraperConfig:
     # route requests via proxy, if multiple are given, uses round robin
     proxies: Optional[List[str]] = Field(default_factory=list)
 
+    # fed into sinks and scraped datapoints
+    ts_format: str = "%Y-%m-%d-%H:%M:%S"
+
     @property
-    def proxies_by_protocol(self) -> Dict[str, str]:
+    def proxies_by_protocol(self) -> Union[Dict[str, str], Dict]:
         proxies: Dict[str, str] = {}
-        for proxy in self.proxies:
-            protocol = "https" if "https" in proxy else "http"
-            proxies[protocol] = proxy
+        if self.proxies is not None:
+            for proxy in self.proxies:
+                protocol = "https" if "https" in proxy else "http"
+                proxies[protocol] = proxy
         return proxies
 
     @property
     def proxy(self) -> bool:
-        return len(self.proxies) > 0
+        return self.proxies is not None and len(self.proxies) > 0

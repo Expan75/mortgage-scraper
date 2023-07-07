@@ -7,19 +7,17 @@ from mortgage_scraper.cli import VERSION
 from pathlib import Path
 
 
-def get_latest_csv_dump(project_dir) -> pd.DataFrame:
-    data_dir = os.path.join(project_dir, "data")
+DEFAULT_TS_FORMAT = "%Y-%m-%d-%H:%M:%S"
 
+
+def parse_timestamp(filename: str) -> datetime:
+    return datetime.strptime(filename[-23:-4], DEFAULT_TS_FORMAT)
+
+
+def get_latest_csv_dump(data_dir: str) -> pd.DataFrame:
     files = [f for f in os.listdir(data_dir) if ".csv" in f]
-
-    def parse_timestamp(filename: str) -> datetime:
-        ts = filename[-21:-4]
-        return datetime.strptime(ts, "%y_%m_%d_%H:%M:%S")
-
-    def most_recent(f1: str, f2: str) -> bool:
-        return parse_timestamp(f1) > parse_timestamp(f2)
-
-    files_most_recent = list(sorted(files, key=cmp_to_key(most_recent), reverse=True))
+    latest = lambda f1, f2: parse_timestamp(f1) > parse_timestamp(f2)  # noqa
+    files_most_recent = list(sorted(files, key=cmp_to_key(latest), reverse=True))
     filepath_most_recent = os.path.join(data_dir, files_most_recent[0])
 
     return pd.read_csv(filepath_most_recent)
@@ -39,8 +37,7 @@ def test_should_perform_cli_basics(entrypoint: str):
     assert result.returncode == 0, "should exit without error code"
 
 
-def test_should_run_single_provider_with_limit(entrypoint: str, project_dir: Path):
-    data_dir = os.path.join(project_dir, "data")
+def test_should_run_single_provider_with_limit(entrypoint: str, data_dir: str):
     files = os.listdir(data_dir)
     result = subprocess.run(
         [
@@ -58,12 +55,11 @@ def test_should_run_single_provider_with_limit(entrypoint: str, project_dir: Pat
     assert result.returncode == 0, "should exit without error code"
     added_files = list(set(os.listdir(data_dir)) - set(files))
     assert len(added_files) == 1, "test run did not yield stored csv"
-    df = get_latest_csv_dump(project_dir)
+    df = get_latest_csv_dump(data_dir)
     assert not df.empty, "no data in csv"
 
 
-def test_random_order_should_mean_mixed_segments(entrypoint: str, project_dir: Path):
-    data_dir = os.path.join(project_dir, "data")
+def test_random_order_should_mean_mixed_segments(entrypoint: str, data_dir: str):
     files = os.listdir(data_dir)
     result = subprocess.run(  # noqa
         [
@@ -84,7 +80,7 @@ def test_random_order_should_mean_mixed_segments(entrypoint: str, project_dir: P
         ]
     )
     added_files = list(set(os.listdir(data_dir)) - set(files))
-    df = get_latest_csv_dump(project_dir)
+    df = get_latest_csv_dump(data_dir)
 
     assert result.returncode == 0, "should exit without error code"
     assert len(added_files) == 1, "test run did not yield stored csv"
@@ -93,8 +89,7 @@ def test_random_order_should_mean_mixed_segments(entrypoint: str, project_dir: P
     assert len(df.asset_value.unique()) > 1, "There should be different asset values"
 
 
-def test_should_scrape_in_random_seeded_order(entrypoint: str, project_dir: Path):
-    data_dir = os.path.join(project_dir, "data")
+def test_should_scrape_in_random_seeded_order(entrypoint: str, data_dir: str):
     files = os.listdir(data_dir)
     runner = lambda: subprocess.run(  # noqa
         [
@@ -120,14 +115,14 @@ def test_should_scrape_in_random_seeded_order(entrypoint: str, project_dir: Path
     assert result.returncode == 0, "should exit without error code"
     added_files = list(set(os.listdir(data_dir)) - set(files))
     assert len(added_files) == 1, "test run did not yield stored csv"
-    df1 = get_latest_csv_dump(project_dir)
+    df1 = get_latest_csv_dump(data_dir)
     assert not df1.empty, "no data in csv"
 
     result = runner()
     assert result.returncode == 0, "should exit without error code"
     added_files = list(set(os.listdir(data_dir)) - set(files))
     assert len(added_files) == 2, "test run did not yield stored csv"
-    df2 = get_latest_csv_dump(project_dir)
+    df2 = get_latest_csv_dump(data_dir)
     assert not df2.empty, "no data in csv"
 
     print(df1)
@@ -136,8 +131,7 @@ def test_should_scrape_in_random_seeded_order(entrypoint: str, project_dir: Path
     assert df1 is not df2
 
 
-def test_should_scrape_hypoteket(entrypoint: str, project_dir: Path):
-    data_dir = os.path.join(project_dir, "data")
+def test_should_scrape_hypoteket(entrypoint: str, data_dir: str):
     files = os.listdir(data_dir)
     result = subprocess.run(
         [
@@ -159,9 +153,8 @@ def test_should_scrape_hypoteket(entrypoint: str, project_dir: Path):
     assert not df.empty, "no data in csv"
 
 
-def test_should_use_proxy_if_available(entrypoint: str, project_dir: Path):
+def test_should_use_proxy_if_available(entrypoint: str, data_dir: str):
     if (proxy := os.getenv("PROXY")) is not None:
-        data_dir = os.path.join(project_dir, "data")
         files = os.listdir(data_dir)
         result = subprocess.run(
             [
@@ -186,8 +179,7 @@ def test_should_use_proxy_if_available(entrypoint: str, project_dir: Path):
         assert not df.empty, "no data in csv"
 
 
-def test_should_scrape_ica(entrypoint: str, project_dir: Path):
-    data_dir = os.path.join(project_dir, "data")
+def test_should_scrape_ica(entrypoint: str, data_dir: str):
     files = os.listdir(data_dir)
     result = subprocess.run(
         [
@@ -209,8 +201,7 @@ def test_should_scrape_ica(entrypoint: str, project_dir: Path):
     assert not df.empty, "no data in csv"
 
 
-def test_should_scrape_sbab(entrypoint: str, project_dir: Path):
-    data_dir = os.path.join(project_dir, "data")
+def test_should_scrape_sbab(entrypoint: str, data_dir: str):
     files = os.listdir(data_dir)
     result = subprocess.run(
         [
@@ -232,8 +223,7 @@ def test_should_scrape_sbab(entrypoint: str, project_dir: Path):
     assert not df.empty, "no data in csv"
 
 
-def test_should_scrape_skandia(entrypoint: str, project_dir: Path):
-    data_dir = os.path.join(project_dir, "data")
+def test_should_scrape_skandia(entrypoint: str, data_dir: str):
     files = os.listdir(data_dir)
     result = subprocess.run(
         [
