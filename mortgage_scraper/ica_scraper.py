@@ -84,7 +84,6 @@ class IcaBankenScraper(AbstractScraper):
         loan_amount: Union[float, int],
         asset_value: Union[float, int],
     ) -> str:
-        print(loan_amount)
         return (
             "https://apimgw-pub.ica.se/t/public.tenant/ica/bank/ac39/mortgage/1.0.0/interestproposal_v2_0?type_of_mortgage=BL"  # noqa
             + f"&period_of_commitment={int(period)}"
