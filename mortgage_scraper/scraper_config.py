@@ -1,7 +1,8 @@
+import os
+import pathlib
 import random
 from typing import Optional, List, Dict, Union
 
-from numpy._typing import _16Bit
 from pydantic import Field
 from pydantic.dataclasses import dataclass
 
@@ -26,7 +27,9 @@ class ScraperConfig:
 
     # switches attached user agent in headers with provided List
     rotate_user_agent: bool = False
-    user_agents_filepath: str = "../agents.txt"
+    user_agents_filepath: str = os.path.join(
+        pathlib.Path(__file__).resolve().parent.parent, "agents.txt"
+    )
     user_agents: Optional[List[str]] = Field(default_factory=list)
 
     # route requests via proxy, if multiple are given, uses round robin
@@ -39,6 +42,7 @@ class ScraperConfig:
         if self.rotate_user_agent:
             with open(self.user_agents_filepath, "r") as f:
                 self.user_agents = [line for line in f if len(line) > 10]
+            print(self.user_agents[:10])
 
     def get_random_user_agent_header(self) -> Union[Dict, Dict[str, str]]:
         if self.user_agents:
