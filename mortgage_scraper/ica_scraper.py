@@ -97,7 +97,7 @@ class IcaBankenScraper(AbstractScraper):
         segments: List[MortgageMarketSegment] = []
         periods = [str(p) for p in [3, 12, 36, 60]]
         for period in periods:
-            segments.extend(generate_segments(period))
+            segments.extend(generate_segments(period=period, config=self.config))
 
         if self.config.randomize_url_order:
             seed = (
@@ -124,6 +124,9 @@ class IcaBankenScraper(AbstractScraper):
             time.sleep(self.config.delay)
             if self.access_token_expired:
                 self.refresh_access_token()
+
+            if self.config.rotate_user_agent:
+                self.session.headers.update(self.config.get_random_user_agent_header())
 
             response = self.session.get(url)
 

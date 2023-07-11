@@ -101,7 +101,7 @@ class SkandiaBankenScraper(AbstractScraper):
         bodies: List[RequestBody] = []
         for entry in parsed_entries:
             period_segments: List[MortgageMarketSegment] = generate_segments(
-                period=entry.binding_period
+                period=entry.binding_period, config=self.config
             )
             period_bodies = [
                 self.generate_scrape_body(
@@ -136,6 +136,10 @@ class SkandiaBankenScraper(AbstractScraper):
         for url, body in tqdm(urls_bodies_pairs):
             # skandia has aggresive rate limiting
             time.sleep(self.config.delay)
+
+            if self.config.rotate_user_agent:
+                self.session.headers.update(self.config.get_random_user_agent_header())
+
             response = self.session.post(url, asdict(body))
 
             if response.status_code != 200:

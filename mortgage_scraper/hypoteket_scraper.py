@@ -53,7 +53,9 @@ class HypoteketScraper(AbstractScraper):
 
     def generate_scrape_urls(self) -> Tuple[List[str], List[MortgageMarketSegment]]:
         """Formats scraping urls based off of generated segments matrix"""
-        segments = generate_segments()
+
+        segments = generate_segments(config=self.config)
+
         if self.config.randomize_url_order:
             seed = (
                 self.config.seed
@@ -83,6 +85,10 @@ class HypoteketScraper(AbstractScraper):
         url_segment_pairs = list(zip(urls, segments))
         for url, segment in tqdm(url_segment_pairs):
             time.sleep(self.config.delay)
+
+            if self.config.rotate_user_agent:
+                self.session.headers.update(self.config.get_random_user_agent_header())
+
             response = self.session.get(url)
 
             if response.status_code != 200:
