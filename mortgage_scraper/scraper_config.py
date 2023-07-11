@@ -3,6 +3,7 @@ import pathlib
 import random
 from typing import Optional, List, Dict, Union
 
+import numpy as np
 from pydantic import Field
 from pydantic.dataclasses import dataclass
 
@@ -14,6 +15,9 @@ class ScraperConfig:
 
     # sleep between requests
     delay: float = 0
+
+    # custom loan volume bins
+    custom_loan_volume_bins: Optional[List[int]] = Field(default_factory=list)
 
     # intepretad as requests/second
     rate_limit: Optional[int] = None
@@ -42,7 +46,6 @@ class ScraperConfig:
         if self.rotate_user_agent:
             with open(self.user_agents_filepath, "r") as f:
                 self.user_agents = [line for line in f if len(line) > 10]
-            print(self.user_agents[:10])
 
     def get_random_user_agent_header(self) -> Union[Dict, Dict[str, str]]:
         if self.user_agents:
@@ -61,3 +64,17 @@ class ScraperConfig:
     @property
     def proxy(self) -> bool:
         return self.proxies is not None and len(self.proxies) > 0
+
+    @staticmethod
+    def parse_loan_volume_bin(raw_input: str) -> List[int]:
+        """
+        Parses a loan volume bin provided as a raw CLI input argument
+        Expects an internval given as: [interval_start,interval_end,interval_step]
+        """
+        cleaned_input = raw_input.replace("[", "").replace("]", "").replace(" ", "")
+        try:
+            start, end, step = [int(float(n)) for n in cleaned_input.split(",")]
+            return [int(v) for v in np.arange(start, end, step)]
+        except ValueError as e:
+            print(e)
+            raise ValueError(f"{raw_input=} is not a parseable loan volume bin")
