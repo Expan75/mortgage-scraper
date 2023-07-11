@@ -1,4 +1,3 @@
-import subprocess
 import pytest
 import numpy as np
 from mortgage_scraper.scraper_config import ScraperConfig
