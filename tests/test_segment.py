@@ -1,12 +1,12 @@
-from mortgage_scraper.segment import generate_segments
+from mortgage_scraper.segment import generate_segments, ScraperConfig
 
 
-def test_should_generate_segments():
+def test_should_generate_segments(default_config: ScraperConfig):
     unique_ltvs = set()
     unique_vols = set()
     unique_asset_values = set()
 
-    segments = generate_segments()
+    segments = generate_segments(config=default_config)
 
     assert len(segments) != 0
     for segment in segments:
@@ -23,3 +23,8 @@ def test_should_generate_segments():
     assert len(unique_vols) > 1, "should have plenty of segments"
     assert len(unique_asset_values) > 1, "should have plenty of segments"
     assert len(segments) < 500_000, "should not have an insane amount of segments"
+
+
+def test_should_generate_custom_segments(advanced_config: ScraperConfig):
+    segments = generate_segments(config=advanced_config)
+    assert segments

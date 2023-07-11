@@ -28,7 +28,6 @@ DEFAULT_LOAN_VOLUME_BINS = [
 def generate_segments(
     config: ScraperConfig,
     period: Optional[str] = None,
-    loan_volume_bins: List[int] = DEFAULT_LOAN_VOLUME_BINS,
 ) -> List[MortgageMarketSegment]:
     """
     Determines the bins to be used for query formatting
@@ -43,11 +42,17 @@ def generate_segments(
     of urls to be sent, forcing us to select bins modestlybins
 
     Bins below are selected to keep the number of segments and urls below 1 million.
-
-    LTV:s are generated on [0.5,1] evenly with the provided decimal granuality.
     """
 
+    loan_volume_bins = (
+        config.custom_loan_volume_bins
+        if config.custom_loan_volume_bins
+        else DEFAULT_LOAN_VOLUME_BINS
+    )
+
     ltv_bins = np.arange(0.5, 1.0, 0.01).tolist()
+    if config.custom_ltv_granularity:
+        ltv_bins = np.arange(0.5, 1.0, config.custom_ltv_granularity)
 
     # infer asset values based off of this
     asset_value_bins = [

@@ -101,7 +101,7 @@ class SkandiaBankenScraper(AbstractScraper):
         bodies: List[RequestBody] = []
         for entry in parsed_entries:
             period_segments: List[MortgageMarketSegment] = generate_segments(
-                period=entry.binding_period
+                period=entry.binding_period, config=self.config
             )
             period_bodies = [
                 self.generate_scrape_body(

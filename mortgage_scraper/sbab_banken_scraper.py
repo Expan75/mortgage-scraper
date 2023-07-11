@@ -51,7 +51,7 @@ class SBABScraper(AbstractScraper):
 
     def generate_scrape_urls(self) -> Tuple[List[str], List[MortgageMarketSegment]]:
         """Formats scraping urls based off of generated parameter matrix"""
-        segments = generate_segments()
+        segments = generate_segments(config=self.config)
         if self.config.randomize_url_order:
             seed = (
                 self.config.seed
