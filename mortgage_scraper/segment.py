@@ -27,9 +27,10 @@ def generate_segments(period: Optional[str] = None) -> List[MortgageMarketSegmen
     ltv = loan / asset <=> asset = loan/ltv
 
     This corresponds to a 2-dimensional market segment. Cardinality of cartesian
-    ltv_bins x loan_amount_bins correponds to the number of urls to be sent,
-    forcing us to select bins modestly; bins below are selected to keep the number
-    of unique segmnets below 1 million.
+    ltv_bins x loan_amount_bins x (unique maturity periods) correponds to the number 
+    of urls to be sent, forcing us to select bins modestlybins
+    
+    Bins below are selected to keep the number of segments and urls below 1 million.
     """
 
     loan_amount_bins = [

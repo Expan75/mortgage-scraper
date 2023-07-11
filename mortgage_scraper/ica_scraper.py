@@ -125,6 +125,9 @@ class IcaBankenScraper(AbstractScraper):
             if self.access_token_expired:
                 self.refresh_access_token()
 
+            if self.config.rotate_user_agent:
+                self.session.headers.update(self.config.get_random_user_agent_header())
+
             response = self.session.get(url)
 
             try:

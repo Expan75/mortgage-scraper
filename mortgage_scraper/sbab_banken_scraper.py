@@ -72,6 +72,10 @@ class SBABScraper(AbstractScraper):
         url_segment_pairs = list(zip(segments, urls))
         for segment, url in tqdm(url_segment_pairs):
             time.sleep(self.config.delay)
+
+            if self.config.rotate_user_agent:
+                self.session.headers.update(self.config.get_random_user_agent_header())
+
             response = self.session.get(url).json()
             serialized_data = [SBABResponse(**data) for data in response]
             for serialized in serialized_data:
