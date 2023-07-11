@@ -37,6 +37,27 @@ def test_should_perform_cli_basics(entrypoint: str):
     assert result.returncode == 0, "should exit without error code"
 
 
+def test_should_parse_all_args_but_no_urls(entrypoint: str):
+    result = subprocess.run(
+        [
+            "python3",
+            entrypoint,
+            "-t",
+            "ica",
+            "-s",
+            "csv",
+            "--urls-limit",
+            "0",
+            "--debug",
+            "-ltv",
+            "0.01",
+        ],
+        capture_output=True,
+    )
+    assert VERSION in str(result.stdout), "version should be readable"
+    assert result.returncode == 0, "should exit without error code"
+
+
 def test_should_run_single_provider_with_limit(entrypoint: str, data_dir: str):
     files = os.listdir(data_dir)
     result = subprocess.run(

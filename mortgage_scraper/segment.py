@@ -1,4 +1,5 @@
 import itertools
+from mortgage_scraper.scraper_config import ScraperConfig
 from typing import List, Optional
 from dataclasses import dataclass
 import numpy as np
@@ -25,7 +26,7 @@ DEFAULT_LOAN_VOLUME_BINS = [
 
 
 def generate_segments(
-    ltv_granularity: Optional[float] = 0.01,
+    config: ScraperConfig,
     period: Optional[str] = None,
     loan_volume_bins: List[int] = DEFAULT_LOAN_VOLUME_BINS,
 ) -> List[MortgageMarketSegment]:
@@ -44,11 +45,9 @@ def generate_segments(
     Bins below are selected to keep the number of segments and urls below 1 million.
 
     LTV:s are generated on [0.5,1] evenly with the provided decimal granuality.
-
-
     """
 
-    ltv_bins = np.arange(0.5, 1.0, ltv_granularity).tolist()
+    ltv_bins = np.arange(0.5, 1.0, 0.01).tolist()
 
     # infer asset values based off of this
     asset_value_bins = [

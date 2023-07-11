@@ -1,7 +1,7 @@
 import sys
 import logging
 import argparse
-from typing import List, Dict, Set, Any, Iterable
+from typing import List, Dict, Set, Any, Iterable, Union
 from mortgage_scraper.base_scraper import AbstractScraper
 from mortgage_scraper.csv_sink import CSVSink
 from mortgage_scraper.ica_scraper import IcaBankenScraper
@@ -86,6 +86,10 @@ def cli():
     parser.add_argument("-v", "--version", action="version", version=VERSION)
     parser.add_argument("-d", "--debug", action="store_true", default=False)
 
+    # seldom used
+    parser.add_argument("-ltv", "--ltv-granularity", type=float, default=0.01)
+    parser.add_argument("-vol", "--loan-volume-bin", nargs="*", default=[])
+
     args = parser.parse_args()
 
     return args
@@ -129,6 +133,12 @@ def main():
     args = cli()
     setup_loggers(args.debug)
 
+    loan_volumes: Union[List[int], List] = []
+    for bin in args.loan_volume_bin:
+        parsed_loan_volume_bin = ScraperConfig.parse_loan_volume_bin(bin)
+        loan_volumes.extend(parsed_loan_volume_bin)
+    loan_volumes = list(set(loan_volumes))
+
     config = ScraperConfig(
         debug=args.debug,
         delay=args.delay,
@@ -138,6 +148,8 @@ def main():
         seed=args.seed,
         proxies=args.proxies,
         rotate_user_agent=args.rotate_user_agent,
+        custom_ltv_granularity=args.ltv_granularity,
+        custom_loan_volume_bins=loan_volumes,
     )
     selected_sinks = find_matching_sinks(args.sink)
     selected_scrapers = find_matching_scrapers(args.target)

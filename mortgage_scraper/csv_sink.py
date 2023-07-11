@@ -43,7 +43,7 @@ class CSVSink(AbstractSink):
         log.debug(f"wrote {record} to {self.filepath}")
 
     def close(self):
-        log.debug("export to {self.filepath} done, closing file...")
+        log.debug(f"export to {self.filepath} done, closing file...")
         self.f.close()
 
     @classmethod

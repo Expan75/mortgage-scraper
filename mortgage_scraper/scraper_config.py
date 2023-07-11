@@ -1,4 +1,5 @@
 import os
+import logging
 import pathlib
 import random
 from typing import Optional, List, Dict, Union
@@ -6,6 +7,9 @@ from typing import Optional, List, Dict, Union
 import numpy as np
 from pydantic import Field
 from pydantic.dataclasses import dataclass
+
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -17,6 +21,7 @@ class ScraperConfig:
     delay: float = 0
 
     # custom loan volume bins
+    custom_ltv_granularity: Optional[float] = 0.01
     custom_loan_volume_bins: Optional[List[int]] = Field(default_factory=list)
 
     # intepretad as requests/second
