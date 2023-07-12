@@ -88,13 +88,16 @@ def harmonise(read_filepath: str, write_filepath: str):
 
 if __name__ == "__main__":
     args = cli()
-    assert args.output[-4:] == ".csv", "output invalid; can only export csv files"
+
+    output_path = pathlib.Path(args.output)
+    parent_dir_path = output_path.parent
+
+    *_, filename = output_path.parts
+    assert ".csv" in filename, "output needs to be a csv filename"
 
     print(f"exporting to {args.output}")
 
-    output_dir = "/".join(args.output.split("/")[:-1])
-    if output_dir:
-        os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(parent_dir_path, exist_ok=True)
 
     for file in tqdm(os.listdir(input_dir)[: args.limit]):
         filepath = os.path.join(input_dir, file)
