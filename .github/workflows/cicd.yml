@@ -17,7 +17,7 @@ jobs:
 
   test:
     needs: lint
-    runs-on: ${{ matrix.os.host }}
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         python-version: ["3.8", "3.11"]
