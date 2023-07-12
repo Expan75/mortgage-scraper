@@ -39,7 +39,6 @@ class ScraperConfig:
     user_agents_filepath: str = os.path.join(
         pathlib.Path(__file__).resolve().parent.parent, "agents.txt"
     )
-    user_agents: Optional[List[str]] = Field(default_factory=list)
 
     # route requests via proxy, if multiple are given, uses round robin
     proxies: Optional[List[str]] = Field(default_factory=list)
@@ -48,15 +47,15 @@ class ScraperConfig:
     ts_format: str = "%Y-%m-%d-%H-%M-%S"
 
     def __post_init__(self):
-        if self.rotate_user_agent:
-            with open(self.user_agents_filepath, "rb+") as f:
-                agents = [line.rstrip().decode("utf-8") for line in f.readlines()]
-                self.user_agents = agents
+        self.user_agents = self.load_user_agents()
 
-    def get_random_user_agent_header(self) -> Union[Dict, Dict[str, str]]:
-        if self.user_agents:
-            return {"User-Agent": random.choice(self.user_agents)}
-        return {}
+    def get_random_user_agent_header(self) -> Dict[str, str]:
+        return {"User-Agent": random.choice(self.user_agents)}
+
+    @classmethod
+    def load_user_agents(cls) -> List[str]:
+        with open(cls.user_agents_filepath, "rb+") as f:
+            return [line.rstrip().decode("utf-8") for line in f.readlines()]
 
     @property
     def proxies_by_protocol(self) -> Union[Dict[str, str], Dict]:

@@ -244,6 +244,9 @@ def test_should_scrape_skandia(data_dir: str):
             "csv",
             "--urls-limit",
             "1",
+            "--randomize",
+            "--seed",
+            "42",
         ]
     )
     assert result.returncode == 0, "should exit without error code"

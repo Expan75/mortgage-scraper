@@ -2,10 +2,10 @@ name: "scraper-cicd"
 on:
   push:
     paths:
-      - 'mortgage_scraper/**'
-      - 'tests/**'
-      - 'conftest.py'
-      - '.github/**'
+      - "mortgage_scraper/**"
+      - "tests/**"
+      - "conftest.py"
+      - ".github/**"
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -30,4 +30,4 @@ jobs:
       - run: python -m pip install -r requirements.txt
       - name: test
         run: >
-          pytest -k "not skandia" # skandia has currently closed off access to their endpoint
+          pytest
