@@ -5,7 +5,7 @@ on:
       - 'mortgage_scraper/**'
       - 'tests/**'
       - 'conftest.py'
-
+      - '.github/**'
 jobs:
   lint:
     runs-on: ubuntu-latest
