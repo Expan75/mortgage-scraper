@@ -32,9 +32,6 @@ INVALID_SCRAPER_MESSAGE = f"""
     Please provide one or many valid scrapers out of {list(IMPLEMENTED_SCRAPERS.keys())}
 """
 
-N_SCRAPERS = len(IMPLEMENTED_SCRAPERS)
-N_SINKS = len(IMPLEMENTED_SINKS)
-
 __all__ = ["cli"]
 
 VERSION = "Mortgage Scraper v1.0.0"
@@ -72,8 +69,8 @@ def cli():
     )
 
     # core
-    parser.add_argument("-t", "--target", nargs=N_SCRAPERS, required=True, type=str)
-    parser.add_argument("-s", "--sink", nargs=N_SINKS, required=True, type=str)
+    parser.add_argument("-t", "--target", nargs="*", required=True, type=str)
+    parser.add_argument("-s", "--sink", nargs="*", required=True, type=str)
 
     # adv. settings
     parser.add_argument("-l", "--rate-limit", default=None, type=int)
