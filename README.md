@@ -59,8 +59,10 @@ python3 -m venv venv && source venv/bin/activate && pip install -r requirements.
 This project uses black8 and flake8 for linting. To run the same linter as applied in CI/CD, use:
 
 ```bash
-(venv) python -m flake8 /mortgage_scraper
+# run formatter to avoid getting rejected by lint check in CI/CD.
+(venv) python -m black ./mortgage_scraper /tests
 
-# alt. run black auto formatter. This does not neccesarrily catch everything!
-(venv) python -m black ./
+# if something slips through formatting still and is rejected, you can manually run
+# linting on your code via:
+(venv) python -m flake8 /mortgage_scraper
 ```
