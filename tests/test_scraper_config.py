@@ -23,8 +23,6 @@ def test_should_get_random_user_agent(advanced_config: ScraperConfig):
     assert agent_header, "no or empty agent header"
 
     # ensure header is attachable
-    s = requests.session()
-    s.headers.update(agent_header)
-
-    res = s.get("https://google.com")
-    res.status_code == 200, "headers should be valid and accepted"
+    for agent in advanced_config.user_agents:
+        headers = {"user-agent": agent}
+        requests.Request(url="https://google.com", headers=headers).prepare()
