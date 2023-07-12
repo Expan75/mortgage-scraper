@@ -37,15 +37,16 @@ def temp_dir():
 
 
 @pytest.fixture
-def default_config():
+def default_config() -> ScraperConfig:
     return ScraperConfig()
 
 
 @pytest.fixture
-def advanced_config(default_config: ScraperConfig):
-    default_config.custom_ltv_granularity = 0.5
-    default_config.custom_loan_volume_bins = np.arange(
-        50_000, 1_000_000, 50_000
-    ).tolist()
+def advanced_config() -> ScraperConfig:
+    opts = {
+        "rotate_user_agent": True,
+        "custom_ltv_granularity": 0.5,
+        "custom_loan_volume_bins": np.arange(50_000, 1_000_000, 50_000).tolist(),
+    }
 
-    return default_config
+    return ScraperConfig(**opts)
