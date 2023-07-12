@@ -20,10 +20,10 @@ class CSVSink(AbstractSink):
     Exports by provider and multiple providers are meant to share a single sink.
     """
 
-    data_dir = (
-        str(pathlib.Path(os.path.dirname(os.path.realpath(__file__))).parent.resolve())
-        + "/data"
-    )
+    project_dir = pathlib.Path(
+        os.path.dirname(os.path.realpath(__file__))
+    ).parent.resolve()
+    data_dir = os.path.join(project_dir, "data")
 
     def __init__(self, namespace: str, ts_format: str):
         os.makedirs(self.data_dir, exist_ok=True)
