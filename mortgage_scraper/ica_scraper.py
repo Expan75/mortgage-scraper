@@ -135,7 +135,6 @@ class IcaBankenScraper(AbstractScraper):
                 serialized = IcaBankenResponse(**parsed["response"])
                 record = {
                     "url": url,
-                    "scraped_at": datetime.now().strftime(self.config.ts_format),
                     **asdict(serialized),
                     **asdict(segment),
                 }

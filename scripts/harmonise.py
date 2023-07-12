@@ -42,6 +42,7 @@ def harmonise(read_filepath: str, write_filepath: str):
     column_map = {
         "url": "url",
         "scraped_at": "scraped_time",
+        "ltv": "ltv",
         "asset_value": "asset_value",
         "loan_amount": "loan_amount",
         "interestTerm": "interest_term_months",

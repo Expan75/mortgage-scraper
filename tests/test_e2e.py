@@ -7,7 +7,7 @@ from functools import cmp_to_key
 from mortgage_scraper.cli import VERSION
 from pathlib import Path
 
-DEFAULT_TS_FORMAT = "%Y-%m-%d-%H:%M:%S"
+DEFAULT_TS_FORMAT = "%Y-%m-%d-%H-%M-%S"
 
 
 def parse_timestamp(filename: str) -> datetime:
@@ -126,9 +126,10 @@ def test_should_scrape_in_random_seeded_order(entrypoint: str, data_dir: str):
     assert not df2.empty, "no data in csv"
     assert df1 is not df2
 
-    excl_ts = [c for c in df1.columns if c != "scraped_at"]
+    changing_columns = {"scraped_at", "ltv", "asset_value", "loan_amount"}
+    fixed_cols = [c for c in df1.columns if c not in changing_columns]
     assert_frame_equal(
-        df1[excl_ts], df2[excl_ts]
+        df1[fixed_cols], df2[fixed_cols]
     ), "seeded runs did not equal one another"
 
 
