@@ -12,10 +12,12 @@ class MortgageMarketSegment:
 
     # not always sue#
     period: Optional[str] = None
-
-    @property
-    def ltv(self) -> float:
-        return self.loan_amount / self.asset_value
+    
+    # declared implictely  
+    ltv: Optional[float] = None
+    
+    def __post_init__(self):
+        self.ltv = self.loan_amount / self.asset_value
 
 
 DEFAULT_LOAN_VOLUME_BINS = [
