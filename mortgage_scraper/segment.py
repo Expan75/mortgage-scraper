@@ -12,10 +12,10 @@ class MortgageMarketSegment:
 
     # not always sue#
     period: Optional[str] = None
-    
-    # declared implictely  
+
+    # declared implictely
     ltv: Optional[float] = None
-    
+
     def __post_init__(self):
         self.ltv = self.loan_amount / self.asset_value
 
