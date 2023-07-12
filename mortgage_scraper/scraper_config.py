@@ -49,8 +49,9 @@ class ScraperConfig:
 
     def __post_init__(self):
         if self.rotate_user_agent:
-            with open(self.user_agents_filepath, "r") as f:
-                self.user_agents = [line for line in f if len(line) > 10]
+            with open(self.user_agents_filepath, "rb+") as f:
+                agents = [line.rstrip().decode("utf-8") for line in f.readlines()]
+                self.user_agents = agents
 
     def get_random_user_agent_header(self) -> Union[Dict, Dict[str, str]]:
         if self.user_agents:

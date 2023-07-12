@@ -35,8 +35,11 @@ class RequestBody:
     # available at request formation
     bindingPeriod: int
     housingInterest: float
-    loanVolume: float
-    price: float
+    loanVolume: int
+    price: int
+
+    # recently added
+    hasOccupationalPension = False
 
 
 @dataclass
@@ -77,7 +80,13 @@ class SkandiaBankenScraper(AbstractScraper):
         self.sinks = sinks
         self.config = config
         self.session = requests.Session()
-        self.session.headers.update({"Content-type": "application/json"})
+        self.session.headers.update(
+            {
+                "content-type": "application/json, text/plain, */*",
+                "accept": "application/json",
+                "accept-language": "en-US,en;q=0.9,sv;q=0.8",
+            }
+        )
 
         if self.config.proxies:
             self.session.proxies.update(self.config.proxies_by_protocol)
@@ -130,43 +139,42 @@ class SkandiaBankenScraper(AbstractScraper):
 
         log.info(f"scraping {len(urls)} urls...")
         urls_bodies_pairs = list(zip(urls, bodies))
-        urls_bodies_pairs_retry: List[Any] = []
 
         for url, body in tqdm(urls_bodies_pairs):
             # skandia has aggresive rate limiting
             time.sleep(self.config.delay)
 
             if self.config.rotate_user_agent:
-                self.session.headers.update(self.config.get_random_user_agent_header())
+                # headers are all lowercase in skandia's case
+                (header, value), *_ = self.config.get_random_user_agent_header().items()
+                adjusted_header = {header.lower(): value}
+                print(f"{adjusted_header=}")
+                self.session.headers.update(adjusted_header)
 
-            response = self.session.post(url, asdict(body))
+            print(asdict(body))
+            response = self.session.post(url, json=asdict(body))
+            print("dumping response: ")
+            print(response.text)
+            try:
+                parsed = response.json()
+                serialized = SkandiaBankenResponse(**parsed)
+                record = {
+                    "url": url,
+                    **asdict(serialized),
+                    **body,
+                }
 
-            if response.status_code != 200:
-                log.critical(f"request to Skandia yielded {response.status_code}")
-                urls_bodies_pairs_retry.append((url, body))
-            else:
-                try:
-                    parsed = response.json()
-                    serialized = SkandiaBankenResponse(**parsed)
-                    record = {
-                        "url": url,
-                        **asdict(serialized),
-                        **body,
-                    }
-
-                    for s in self.sinks:
-                        s.write(record)
-                except requests.exceptions.JSONDecodeError as e:
-                    if "Vi har stoppat detta anrop" in response.text:
-                        log.critical("request was blocked by Skandia")
-                        log.critical("scraper is now likely ip blocked, exiting...")
-                        break
-                    else:
-                        log.critical("could not decode json response, adding to retry")
-                        print("error: ", e)
-                        print("response", response.text)
-
-        log.info(f"Scraped {len(urls)} out of {len(urls_bodies_pairs_retry)} urls")
+                for s in self.sinks:
+                    s.write(record)
+            except requests.exceptions.JSONDecodeError as e:
+                print(e)
+                if "Vi har stoppat detta anrop" in response.text:
+                    log.critical("request was blocked by Skandia")
+                    log.critical("scraper is now likely ip blocked, exiting...")
+                    break
+                else:
+                    log.critical("could not decode json response, adding to retry")
+                    print("response", response.text)
 
         for s in self.sinks:
             s.close()

@@ -5,7 +5,6 @@ import pandas as pd
 from pandas.testing import assert_frame_equal
 from functools import cmp_to_key
 from mortgage_scraper.cli import VERSION
-from pathlib import Path
 
 DEFAULT_TS_FORMAT = "%Y-%m-%d-%H-%M-%S"
 
@@ -23,26 +22,27 @@ def get_latest_csv_dump(data_dir: str) -> pd.DataFrame:
     return pd.read_csv(filepath_most_recent)
 
 
-def test_should_find_entrypoint(entrypoint: str):
-    assert os.path.isfile(Path(entrypoint)), "cannot locate entrypoint"
-
-
-def test_should_perform_cli_basics(entrypoint: str):
-    result = subprocess.run(["python3", entrypoint, "--version"], capture_output=True)
+def test_should_perform_cli_basics():
+    result = subprocess.run(
+        ["python3", "-m", "mortgage_scraper", "--version"], capture_output=True
+    )
     assert VERSION in str(result.stdout), "version should be readable"
     assert result.returncode == 0, "should exit without error code"
 
-    result = subprocess.run(["python3", entrypoint, "--help"], capture_output=True)
+    result = subprocess.run(
+        ["python3", "-m", "mortgage_scraper", "--help"], capture_output=True
+    )
     assert "Author" in str(result.stdout)
     assert result.returncode == 0, "should exit without error code"
 
 
-def test_should_run_single_provider_with_limit(entrypoint: str, data_dir: str):
+def test_should_run_single_provider_with_limit(data_dir: str):
     files = os.listdir(data_dir)
     result = subprocess.run(
         [
             "python3",
-            entrypoint,
+            "-m",
+            "mortgage_scraper",
             "--target",
             "ica",
             "--sink",
@@ -59,12 +59,13 @@ def test_should_run_single_provider_with_limit(entrypoint: str, data_dir: str):
     assert not df.empty, "no data in csv"
 
 
-def test_random_order_should_mean_mixed_segments(entrypoint: str, data_dir: str):
+def test_random_order_should_mean_mixed_segments(data_dir: str):
     files = os.listdir(data_dir)
     result = subprocess.run(  # noqa
         [
             "python3",
-            entrypoint,
+            "-m",
+            "mortgage_scraper",
             "--target",
             "ica",
             "--sink",
@@ -89,12 +90,13 @@ def test_random_order_should_mean_mixed_segments(entrypoint: str, data_dir: str)
     assert len(df.asset_value.unique()) > 1, "There should be different asset values"
 
 
-def test_should_scrape_in_random_seeded_order(entrypoint: str, data_dir: str):
+def test_should_scrape_in_random_seeded_order(data_dir: str):
     files = os.listdir(data_dir)
     runner = lambda: subprocess.run(  # noqa
         [
             "python3",
-            entrypoint,
+            "-m",
+            "mortgage_scraper",
             "--target",
             "ica",
             "--sink",
@@ -133,12 +135,13 @@ def test_should_scrape_in_random_seeded_order(entrypoint: str, data_dir: str):
     ), "seeded runs did not equal one another"
 
 
-def test_should_scrape_hypoteket(entrypoint: str, data_dir: str):
+def test_should_scrape_hypoteket(data_dir: str):
     files = os.listdir(data_dir)
     result = subprocess.run(
         [
             "python3",
-            entrypoint,
+            "-m",
+            "mortgage_scraper",
             "--target",
             "hypoteket",
             "--sink",
@@ -155,13 +158,14 @@ def test_should_scrape_hypoteket(entrypoint: str, data_dir: str):
     assert not df.empty, "no data in csv"
 
 
-def test_should_use_proxy_if_available(entrypoint: str, data_dir: str):
+def test_should_use_proxy_if_available(data_dir: str):
     if (proxy := os.getenv("PROXY")) is not None:
         files = os.listdir(data_dir)
         result = subprocess.run(
             [
                 "python3",
-                entrypoint,
+                "-m",
+                "mortgage_scraper",
                 "--target",
                 "ica",
                 "--sink",
@@ -181,12 +185,13 @@ def test_should_use_proxy_if_available(entrypoint: str, data_dir: str):
         assert not df.empty, "no data in csv"
 
 
-def test_should_scrape_ica(entrypoint: str, data_dir: str):
+def test_should_scrape_ica(data_dir: str):
     files = os.listdir(data_dir)
     result = subprocess.run(
         [
             "python3",
-            entrypoint,
+            "-m",
+            "mortgage_scraper",
             "--target",
             "ica",
             "--sink",
@@ -203,12 +208,13 @@ def test_should_scrape_ica(entrypoint: str, data_dir: str):
     assert not df.empty, "no data in csv"
 
 
-def test_should_scrape_sbab(entrypoint: str, data_dir: str):
+def test_should_scrape_sbab(data_dir: str):
     files = os.listdir(data_dir)
     result = subprocess.run(
         [
             "python3",
-            entrypoint,
+            "-m",
+            "mortgage_scraper",
             "--target",
             "sbab",
             "--sink",
@@ -225,12 +231,13 @@ def test_should_scrape_sbab(entrypoint: str, data_dir: str):
     assert not df.empty, "no data in csv"
 
 
-def test_should_scrape_skandia(entrypoint: str, data_dir: str):
+def test_should_scrape_skandia(data_dir: str):
     files = os.listdir(data_dir)
     result = subprocess.run(
         [
             "python3",
-            entrypoint,
+            "-m",
+            "mortgage_scraper",
             "--target",
             "skandia",
             "--sink",
