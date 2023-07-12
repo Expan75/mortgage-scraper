@@ -2,7 +2,6 @@ import time
 import random
 import logging
 import requests
-from datetime import datetime
 from typing import Optional, Dict, List, Tuple, Any
 from dataclasses import dataclass, asdict
 
@@ -151,7 +150,6 @@ class SkandiaBankenScraper(AbstractScraper):
                     serialized = SkandiaBankenResponse(**parsed)
                     record = {
                         "url": url,
-                        "scraped_at": datetime.now().strftime(self.config.ts_format),
                         **asdict(serialized),
                         **body,
                     }

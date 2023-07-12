@@ -111,10 +111,7 @@ def setup_scraper(
     scraper: str, sinks: Iterable[str], config: ScraperConfig
 ) -> AbstractScraper:
     log.info(f"settings sinks with namespace: {scraper}")
-    scraper_sinks = [
-        IMPLEMENTED_SINKS[s](namespace=scraper, ts_format=config.ts_format)
-        for s in sinks
-    ]
+    scraper_sinks = [IMPLEMENTED_SINKS[s](scraper, config) for s in sinks]
     return IMPLEMENTED_SCRAPERS[scraper](scraper_sinks, config)
 
 

@@ -45,7 +45,7 @@ class ScraperConfig:
     proxies: Optional[List[str]] = Field(default_factory=list)
 
     # fed into sinks and scraped datapoints
-    ts_format: str = "%Y-%m-%d-%H:%M:%S"
+    ts_format: str = "%Y-%m-%d-%H-%M-%S"
 
     def __post_init__(self):
         if self.rotate_user_agent:

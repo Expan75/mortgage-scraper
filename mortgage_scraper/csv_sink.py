@@ -6,6 +6,7 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 
 from mortgage_scraper.base_sink import AbstractSink
+from mortgage_scraper.scraper_config import ScraperConfig
 
 
 log = logging.getLogger(__name__)
@@ -25,19 +26,24 @@ class CSVSink(AbstractSink):
     ).parent.resolve()
     data_dir = os.path.join(project_dir, "data")
 
-    def __init__(self, namespace: str, ts_format: str):
+    def __init__(self, namespace: str, config: ScraperConfig):
         os.makedirs(self.data_dir, exist_ok=True)
 
         self.namespace = str
-        self.filepath = self.get_export_filepath(namespace, ts_format)
+        self.config: ScraperConfig = config
+        self.filepath = self.get_export_filepath(namespace, config.ts_format)
 
         self.f = open(self.filepath, "w+")
         self.writer: Optional[csv.DictWriter] = None
 
-    def write(self, record: Dict):
+    def write(self, record: Dict, add_timestamp=True):
         if self.writer is None:
             self.writer = csv.DictWriter(self.f, fieldnames=record.keys())
             self.writer.writeheader()
+
+        if add_timestamp:
+            record["scraped_at"] = datetime.now().strftime(self.config.ts_format)
+
         self.writer.writerow(record)
         self.f.flush()
         log.debug(f"wrote {record} to {self.filepath}")
