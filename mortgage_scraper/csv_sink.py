@@ -37,12 +37,14 @@ class CSVSink(AbstractSink):
         self.writer: Optional[csv.DictWriter] = None
 
     def write(self, record: Dict, add_timestamp=True):
-        if self.writer is None:
-            self.writer = csv.DictWriter(self.f, fieldnames=record.keys())
-            self.writer.writeheader()
-
+        columns = [*record.keys()]
         if add_timestamp:
+            columns.append("scraped_at")
             record["scraped_at"] = datetime.now().strftime(self.config.ts_format)
+
+        if self.writer is None:
+            self.writer = csv.DictWriter(self.f, fieldnames=columns)
+            self.writer.writeheader()
 
         self.writer.writerow(record)
         self.f.flush()

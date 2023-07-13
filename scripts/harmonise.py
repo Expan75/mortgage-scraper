@@ -1,7 +1,6 @@
 import os
 import pathlib
 import argparse
-import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
@@ -20,33 +19,21 @@ def cli():
     parser.add_argument("-o", "--output", required=True, type=str)
     parser.add_argument("-c", "--cleanup", action="store_true", default=False)
     parser.add_argument("-l", "--limit", default=None, type=int)
+    parser.add_argument("-d", "--delimiter", default=",", type=str)
     args = parser.parse_args()
     return args
 
 
-def to_months(period):
-    period_to_months = {
-        "threeMonth": 3,
-        "sixMonth": 6,
-        "oneYear": 12,
-        "threeYear": 12 * 3,
-        "fiveYear": 12 * 5,
-        "tenYear": 12 * 10,
-    }
-    if type(period) != int:
-        return period_to_months.get(period, np.NaN)
-    return period
-
-
-def harmonise(read_filepath: str, write_filepath: str):
+def harmonise(read_filepath: str, write_filepath: str, delimiter: str):
     column_map = {
+        # common fields for all
         "url": "url",
-        "scraped_at": "scraped_time",
         "ltv": "ltv",
         "asset_value": "asset_value",
         "loan_amount": "loan_amount",
-        "interestTerm": "interest_term_months",
-        "Rantebindningtid": "interest_term_months",
+        "period": "interest_term_months",
+        "scraped_at": "scraped_time",
+        # specific terms provider wise
         "offered_interest_rate": "offered_interest_rate",
         "Rantesats": "offered_interest_rate",
         "codeEffectiveInterestRate": "offered_interest_rate",
@@ -59,22 +46,19 @@ def harmonise(read_filepath: str, write_filepath: str):
     # attach raw scrape body as json
     export_df.json = df.apply(lambda x: x.to_json(), axis=1)
     export_df.bank = read_filepath.split("/")[-1].split("_")[0]
-
-    # avoid having duplicated cols for periods
-    if df.period.isnull().values.any():
-        df.drop(axis=1, columns=["period"], inplace=True)
+    export_df.ltv = df.loan_amount / df.asset_value
 
     df = df.rename(columns=column_map)
     for col in set(df.columns) & set(export_df.columns):
         export_df[col] = df[col].copy()
 
     # apply misc. data cleaning and ordering
-    export_df.interest_term_months = export_df.interest_term_months.apply(to_months)
     column_order = list(
         set(
             [
                 "bank",
                 "scraped_time",
+                "ltv",
                 "asset_value",
                 "loan_amount",
                 "interest_term_months",
@@ -83,7 +67,9 @@ def harmonise(read_filepath: str, write_filepath: str):
         )
     )
     # append ontooutput file
-    export_df[column_order].to_csv(write_filepath, index=False, mode="a+")
+    export_df[column_order].to_csv(
+        write_filepath, index=False, mode="a+", sep=delimiter
+    )
 
 
 if __name__ == "__main__":
@@ -101,7 +87,7 @@ if __name__ == "__main__":
 
     for file in tqdm(os.listdir(input_dir)[: args.limit]):
         filepath = os.path.join(input_dir, file)
-        harmonise(filepath, args.output)
+        harmonise(filepath, args.output, args.delimiter)
 
     # destructively removes old data artifacts harmonised into single csv by script
     if args.cleanup:

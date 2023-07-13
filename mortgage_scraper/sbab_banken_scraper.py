@@ -1,7 +1,6 @@
 import time
 import random
 import logging
-from datetime import datetime
 from typing import List, Tuple, Union
 from dataclasses import dataclass, asdict
 
@@ -81,9 +80,10 @@ class SBABScraper(AbstractScraper):
             for serialized in serialized_data:
                 record = {
                     "url": url,
-                    "scraped_at": datetime.now().strftime(self.config.ts_format),
                     **asdict(serialized),
                     **asdict(segment),
+                    "period": serialized.Rantebindningstid,
+                    "bank": "sbab",
                 }
                 for sink in self.sinks:
                     sink.write(record)

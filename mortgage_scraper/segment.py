@@ -10,8 +10,8 @@ class MortgageMarketSegment:
     asset_value: float
     loan_amount: float
 
-    # not always sue#
-    period: Optional[str] = None
+    # always given in months
+    period: Optional[int] = None
 
     # declared implictely
     ltv: Optional[float] = None
@@ -29,7 +29,7 @@ DEFAULT_LOAN_VOLUME_BINS = [
 
 def generate_segments(
     config: ScraperConfig,
-    period: Optional[str] = None,
+    period: Optional[int] = None,
 ) -> List[MortgageMarketSegment]:
     """
     Determines the bins to be used for query formatting

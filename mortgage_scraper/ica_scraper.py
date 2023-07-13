@@ -95,7 +95,7 @@ class IcaBankenScraper(AbstractScraper):
     def generate_scrape_urls(self) -> Tuple[List[str], List[MortgageMarketSegment]]:
         """Formats scraping urls based off of the default market segments"""
         segments: List[MortgageMarketSegment] = []
-        periods = [str(p) for p in [3, 12, 36, 60]]
+        periods = [p for p in [3, 12, 36, 60]]
         for period in periods:
             segments.extend(generate_segments(period=period, config=self.config))
 
@@ -137,6 +137,7 @@ class IcaBankenScraper(AbstractScraper):
                     "url": url,
                     **asdict(serialized),
                     **asdict(segment),
+                    "bank": "ica",
                 }
 
                 for s in self.sinks:
