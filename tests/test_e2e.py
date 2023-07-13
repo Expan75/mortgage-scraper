@@ -2,7 +2,6 @@ import os
 import subprocess
 from datetime import datetime
 import pandas as pd
-from pandas._libs.lib import is_datetime64_array
 from pandas.api.types import (
     is_integer_dtype,
     is_float_dtype,

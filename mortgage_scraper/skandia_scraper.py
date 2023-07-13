@@ -1,10 +1,9 @@
 import time
-import functools
 import random
 import logging
 import requests
 from pprint import pprint
-from typing import Optional, Dict, List, Tuple, cast
+from typing import Optional, Dict, List, Tuple
 from dataclasses import dataclass, asdict
 
 from tqdm import tqdm
@@ -136,7 +135,8 @@ class SkandiaBankenScraper(AbstractScraper):
             )
             random.Random(seed).shuffle(body_segment_pairs)
 
-        # VERY ugly if proper ryping is to be applied to inverse zips: see: https://stackoverflow.com/questions/56564705/python-type-hints-for-generic-args-specifically-zip-or-zipwith
+        # VERY ugly if proper ryping is to be applied to inverse zipssee
+        # https://stackoverflow.com/questions/56564705/python-type-hints-for-generic-args-specifically-zip-or-zipwit # noqa: E5
         inverse_zipped_pairs = zip(
             *body_segment_pairs[: self.config.urls_limit]
         )  # noqa: E5  # type: ignore
