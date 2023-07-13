@@ -191,9 +191,13 @@ class SkandiaBankenScraper(AbstractScraper):
                 self.timeout = 0
 
             except requests.exceptions.JSONDecodeError as e:
-                if "Vi har stoppat detta anrop" in response.text:
+                blocked = "Vi har stoppat detta anrop" in response.text
+                if blocked and self.retries > 5:
                     log.critical("request was blocked by Skandia, dumping request.")
-                    log.critical("likely caused by block or an update to their API")
+                    log.critical(
+                        f"exhausted exp. backoff strategy after {self.retries}"
+                    )
+                    log.critical("dumping request and exiting...")
                     log_error_dump = {
                         "url": url,
                         "body": asdict(body),
@@ -201,19 +205,15 @@ class SkandiaBankenScraper(AbstractScraper):
                         "headers": self.session.headers,
                     }
                     pprint({"request": log_error_dump})
+                    exit(1)
+                elif blocked:
                     log.critical(
-                        "trying to recover via exponential backoff strategy with 5 retries"
+                        f"request was blocked, recovering via exponential backoff with used retries {self.retries}/5 possible"  # noqa
                     )
-                    if self.retries > 5:
-                        log.critical(
-                            "could not recover as 5 exp. backoff retries, exiting..."
-                        )
-                        exit(1)
-                    else:
-                        self.retries = self.retries + 1
-                        self.timeout = 2 * (2 ** (self.retries))
-                        time.sleep(self.timeout)
-                        url_body_segment_triples.append((url, body, segment))
+                    self.retries = self.retries + 1
+                    self.timeout = 2 * (2 ** (self.retries))
+                    time.sleep(self.timeout)
+                    url_body_segment_triples.append((url, body, segment))
                 else:
                     raise e
 
