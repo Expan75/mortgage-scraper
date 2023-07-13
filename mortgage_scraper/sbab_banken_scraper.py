@@ -81,9 +81,10 @@ class SBABScraper(AbstractScraper):
             for serialized in serialized_data:
                 record = {
                     "url": url,
-                    "scraped_at": datetime.now().strftime(self.config.ts_format),
                     **asdict(serialized),
                     **asdict(segment),
+                    "period": serialized.Rantebindningstid,
+                    "bank": "sbab",
                 }
                 for sink in self.sinks:
                     sink.write(record)

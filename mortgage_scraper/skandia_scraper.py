@@ -1,9 +1,10 @@
 import time
+import functools
 import random
 import logging
 import requests
 from pprint import pprint
-from typing import Optional, Dict, List, Tuple
+from typing import Optional, Dict, List, Tuple, cast
 from dataclasses import dataclass, asdict
 
 from tqdm import tqdm
@@ -23,12 +24,14 @@ class RateListEntry:
     text: str  # "Ordinarie ränta (1 år): 5,19%"
 
     @property
-    def binding_period(self) -> str:
-        return self.id.split(";")[0]
+    def binding_period(self) -> int:
+        cleaned_value = self.id.split(";")[0]
+        return int(cleaned_value)
 
     @property
-    def housing_interest(self) -> str:
-        return self.id.split(";")[-1]
+    def housing_interest(self) -> float:
+        cleaned_value = self.id.split(";")[-1].replace(",", ".")
+        return float(cleaned_value)
 
 
 @dataclass
@@ -92,7 +95,9 @@ class SkandiaBankenScraper(AbstractScraper):
         """As this API requires POSTs we opt for bodies instead of url parameters"""
         return RequestBody(period, housing_interest, loan_volume, price)
 
-    def generate_scrape_bodies(self) -> List[RequestBody]:
+    def generate_scrape_bodies(
+        self,
+    ) -> Tuple[Tuple[RequestBody], Tuple[MortgageMarketSegment]]:
         """As this API requires POSTs we opt for bodies instead of url parameters"""
         period_entries_response = self.session.get(
             "https://www.skandia.se/epi-api/interests/mortgage"
@@ -102,20 +107,26 @@ class SkandiaBankenScraper(AbstractScraper):
         ]
 
         bodies: List[RequestBody] = []
+        segments: List[MortgageMarketSegment] = []
         for entry in parsed_entries:
             period_segments: List[MortgageMarketSegment] = generate_segments(
                 period=entry.binding_period, config=self.config
             )
             period_bodies = [
                 self.generate_scrape_body(
-                    int(entry.binding_period),
-                    float(entry.housing_interest.replace(",", ".")),
+                    entry.binding_period,
+                    entry.housing_interest,
                     int(segment.loan_amount),
                     int(segment.asset_value),
                 )
                 for segment in period_segments
             ]
+            segments.extend(period_segments)
             bodies.extend(period_bodies)
+
+        body_segment_pairs: List[Tuple[RequestBody, MortgageMarketSegment]] = list(
+            zip(bodies, segments)
+        )
 
         if self.config.randomize_url_order:
             seed = (
@@ -123,19 +134,24 @@ class SkandiaBankenScraper(AbstractScraper):
                 if self.config.seed is not None
                 else random.randint(1, 1000)
             )
-            random.Random(seed).shuffle(bodies)
+            random.Random(seed).shuffle(body_segment_pairs)
 
-        return bodies[: self.config.urls_limit]
+        # VERY ugly if proper ryping is to be applied to inverse zips: see: https://stackoverflow.com/questions/56564705/python-type-hints-for-generic-args-specifically-zip-or-zipwith
+        inverse_zipped_pairs = zip(
+            *body_segment_pairs[: self.config.urls_limit]
+        )  # noqa: E5  # type: ignore
+        bodies, segments = inverse_zipped_pairs  # type: ignore
+        return bodies, segments  # type: ignore
 
     def run_scraping_job(self) -> None:
         """Manages the actual scraping job, exporting to each sink and so on"""
-        bodies = self.generate_scrape_bodies()  # params here
+        bodies, segments = self.generate_scrape_bodies()  # params here
         urls = ["https://www.skandia.se/papi/mortgage/v2.0/discounts" for _ in bodies]
 
         log.info(f"scraping {len(urls)} urls...")
-        urls_bodies_pairs = list(zip(urls, bodies))
+        url_body_segment_triples = list(zip(urls, bodies, segments))
 
-        for url, body in tqdm(urls_bodies_pairs):
+        for url, body, segment in tqdm(url_body_segment_triples):
             time.sleep(self.config.delay)
 
             # user agent key is lowercase and header  always present in skandia's case
@@ -147,7 +163,13 @@ class SkandiaBankenScraper(AbstractScraper):
             try:
                 parsed = response.json()
                 serialized = SkandiaBankenResponse(**parsed)
-                record = {"url": url, **asdict(serialized), **asdict(body)}
+                record = {
+                    "url": url,
+                    **asdict(segment),
+                    **asdict(serialized),
+                    **asdict(body),
+                    "bank": "skandia",
+                }
 
                 for s in self.sinks:
                     s.write(record)

@@ -2,11 +2,37 @@ import os
 import subprocess
 from datetime import datetime
 import pandas as pd
+from pandas._libs.lib import is_datetime64_array
+from pandas.api.types import (
+    is_integer_dtype,
+    is_float_dtype,
+    is_numeric_dtype,
+    is_string_dtype,
+    is_datetime64_any_dtype,
+)
 from pandas.testing import assert_frame_equal
 from functools import cmp_to_key
 from mortgage_scraper.cli import VERSION
 
 DEFAULT_TS_FORMAT = "%Y-%m-%d-%H-%M-%S"
+EXPECTED_COLUMN_TYPES = {
+    "ltv": is_float_dtype,
+    "period": is_integer_dtype,
+    "bank": is_string_dtype,
+    "asset_value": is_numeric_dtype,
+    "loan_amount": is_numeric_dtype,
+    "scraped_at": lambda col: is_datetime64_any_dtype(
+        pd.to_datetime(col, format=DEFAULT_TS_FORMAT)
+    ),
+}
+
+
+def column_types_match_expected(df):
+    for col, expected_type_f in EXPECTED_COLUMN_TYPES.items():
+        assert expected_type_f(
+            df[col]
+        ), f"{df[col].dtype} does not match expected {expected_type_f=}"
+    return True
 
 
 def parse_timestamp(filename: str) -> datetime:
@@ -155,7 +181,9 @@ def test_should_scrape_hypoteket(data_dir: str):
     added_files = list(set(os.listdir(data_dir)) - set(files))
     assert len(added_files) == 1, "test run did not yield stored csv"
     df = pd.read_csv(os.path.join(data_dir, added_files[0]))
+    assert not df.period.isna().values.any(), "period was not attached succesfully"
     assert not df.empty, "no data in csv"
+    assert column_types_match_expected(df), f"column types do not match for {df.info()}"
 
 
 def test_should_use_proxy_if_available(data_dir: str):
@@ -183,6 +211,10 @@ def test_should_use_proxy_if_available(data_dir: str):
 
         df = pd.read_csv(os.path.join(data_dir, added_files[0]))
         assert not df.empty, "no data in csv"
+        assert not df.period.isna().values.any(), "period was not attached succesfully"
+        assert column_types_match_expected(
+            df
+        ), f"column types do not match for {df.info()}"
 
 
 def test_should_scrape_ica(data_dir: str):
@@ -205,6 +237,8 @@ def test_should_scrape_ica(data_dir: str):
     added_files = list(set(os.listdir(data_dir)) - set(files))
     assert len(added_files) == 1, "test run did not yield stored csv"
     df = pd.read_csv(os.path.join(data_dir, added_files[0]))
+    assert not df.period.isna().values.any(), "period was not attached succesfully"
+    assert column_types_match_expected(df), f"column types do not match for {df.info()}"
     assert not df.empty, "no data in csv"
 
 
@@ -228,6 +262,8 @@ def test_should_scrape_sbab(data_dir: str):
     added_files = list(set(os.listdir(data_dir)) - set(files))
     assert len(added_files) == 1, "test run did not yield stored csv"
     df = pd.read_csv(os.path.join(data_dir, added_files[0]))
+    assert not df.period.isna().values.any(), "period was not attached succesfully"
+    assert column_types_match_expected(df), f"column types do not match for {df.info()}"
     assert not df.empty, "no data in csv"
 
 
@@ -244,7 +280,8 @@ def test_should_scrape_skandia(data_dir: str):
             "csv",
             "--urls-limit",
             "1",
-            "--rotate-user-agent" "--randomize",
+            "--rotate-user-agent",
+            "--randomize",
             "--seed",
             "42",
         ]
@@ -253,4 +290,6 @@ def test_should_scrape_skandia(data_dir: str):
     added_files = list(set(os.listdir(data_dir)) - set(files))
     assert len(added_files) == 1, "test run did not yield stored csv"
     df = pd.read_csv(os.path.join(data_dir, added_files[0]))
+    assert not df.period.isna().values.any(), "period was not attached succesfully"
+    assert column_types_match_expected(df), f"column types do not match for {df.info()}"
     assert not df.empty, "no data in csv"

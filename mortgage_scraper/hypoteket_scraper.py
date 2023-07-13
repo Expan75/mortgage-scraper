@@ -1,8 +1,9 @@
 import time
 import logging
 import random
+from pprint import pprint
 from datetime import datetime
-from typing import Optional, List, Tuple, Union
+from typing import Optional, List, Tuple, Union, Dict
 from dataclasses import dataclass, asdict
 
 import requests
@@ -29,6 +30,17 @@ class HypoteketResponse:
     codeInterestRate: float
     codeEffectiveInterestRate: float
     code: str
+
+    def get_interest_term_period_months(self) -> int:
+        lookup: Dict[str, int] = {
+            "threeMonth": 3,
+            "sixMonth": 6,
+            "oneYear": 12,
+            "threeYear": 12 * 3,
+            "fiveYear": 12 * 5,
+            "tenYear": 12 * 10,
+        }
+        return lookup[self.interestTerm]
 
 
 class HypoteketScraper(AbstractScraper):
@@ -95,14 +107,18 @@ class HypoteketScraper(AbstractScraper):
                 log.critical(f"Hypoteket requests yield {response.status_code}")
             try:
                 parsed = response.json()
-                records = [
-                    {
+
+                records = []
+                for period in parsed:
+                    serialized_response = HypoteketResponse(**period)
+                    record = {
                         "url": url,
                         **asdict(segment),
-                        **asdict(HypoteketResponse(**period)),
+                        **asdict(serialized_response),
+                        "period": serialized_response.get_interest_term_period_months(),
+                        "bank": "hypoteket",
                     }
-                    for period in parsed
-                ]
+                    records.append(record)
 
                 for sink in self.sinks:
                     for record in records:
