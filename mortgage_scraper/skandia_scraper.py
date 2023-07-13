@@ -69,6 +69,10 @@ class SkandiaBankenScraper(AbstractScraper):
     url_parameters: Optional[Dict[int, List[Tuple[int, int]]]] = None
     base_url = "https://www.skandia.se/epi-api"
 
+    # expoential backoff
+    retries: int = 0
+    timeout: int = 0
+
     def __init__(
         self,
         sinks: List[AbstractSink],
@@ -159,7 +163,15 @@ class SkandiaBankenScraper(AbstractScraper):
             adjusted_header = {header.lower(): value}
             self.session.headers.update(adjusted_header)
 
-            response = self.session.post(url, json=asdict(body))
+            # using session to spawn requests lead to added skandia rejected headers
+            request = requests.Request(
+                "POST", url=url, json=asdict(body), headers=self.session.headers
+            ).prepare()
+
+            # always attached by requests, but not accepted by skandia
+            del request.headers["Accept-Encoding"]
+
+            response = self.session.send(request)
             try:
                 parsed = response.json()
                 serialized = SkandiaBankenResponse(**parsed)
@@ -174,11 +186,14 @@ class SkandiaBankenScraper(AbstractScraper):
                 for s in self.sinks:
                     s.write(record)
 
+                # reset backoff on successful request
+                self.retries = 0
+                self.timeout = 0
+
             except requests.exceptions.JSONDecodeError as e:
-                print(e)
                 if "Vi har stoppat detta anrop" in response.text:
                     log.critical("request was blocked by Skandia, dumping request.")
-                    log.critical("likely caused by an update to their API")
+                    log.critical("likely caused by block or an update to their API")
                     log_error_dump = {
                         "url": url,
                         "body": asdict(body),
@@ -186,10 +201,21 @@ class SkandiaBankenScraper(AbstractScraper):
                         "headers": self.session.headers,
                     }
                     pprint({"request": log_error_dump})
-                    exit(1)
+                    log.critical(
+                        "trying to recover via exponential backoff strategy with 5 retries"
+                    )
+                    if self.retries > 5:
+                        log.critical(
+                            "could not recover as 5 exp. backoff retries, exiting..."
+                        )
+                        exit(1)
+                    else:
+                        self.retries = self.retries + 1
+                        self.timeout = 2 * (2 ** (self.retries))
+                        time.sleep(self.timeout)
+                        url_body_segment_triples.append((url, body, segment))
                 else:
-                    log.critical("could not decode json response, adding to retry")
-                    print("response", response.text)
+                    raise e
 
         for s in self.sinks:
             s.close()
