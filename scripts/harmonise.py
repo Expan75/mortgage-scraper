@@ -54,7 +54,10 @@ def harmonise(read_filepath: str, write_filepath: str, delimiter: str):
         ]
     )
 
-    df[column_order].to_csv(write_filepath, index=False, mode="a+", sep=delimiter)
+    write_header = not os.path.exists(write_filepath)
+    df[column_order].to_csv(
+        write_filepath, index=False, mode="a+", sep=delimiter, header=write_header
+    )
 
 
 if __name__ == "__main__":
