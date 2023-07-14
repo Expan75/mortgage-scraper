@@ -1,7 +1,9 @@
 import os
 import csv
+import json
 import logging
 import pathlib
+import operator
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 
@@ -26,6 +28,20 @@ class CSVSink(AbstractSink):
     ).parent.resolve()
     data_dir = os.path.join(project_dir, "data")
 
+    # columsn that will be given columns without being compressed
+    # into a "raw" json payload
+    CORE_COLUMNS = set(
+        [
+            "url",
+            "asset_value",
+            "loan_amount",
+            "period",
+            "ltv",
+            "bank",
+            "scraped_at",
+        ]
+    )
+
     def __init__(self, namespace: str, config: ScraperConfig):
         os.makedirs(self.data_dir, exist_ok=True)
 
@@ -36,17 +52,26 @@ class CSVSink(AbstractSink):
         self.f = open(self.filepath, "w+")
         self.writer: Optional[csv.DictWriter] = None
 
-    def write(self, record: Dict, add_timestamp=True):
-        columns = [*record.keys()]
-        if add_timestamp:
-            columns.append("scraped_at")
-            record["scraped_at"] = datetime.now().strftime(self.config.ts_format)
+    def write(self, record: Dict):
+        # attach meta data
+        record["scraped_at"] = datetime.now().strftime(self.config.ts_format)
+        record["bank"] = self.namespace
+
+        # compress non-core columns into raw json string
+        record_core = {k: v for k, v in record.items() if k in self.CORE_COLUMNS}
+        record_aux_fields = {k: v for k, v in record.items() if k not in record_core}
+        print(record_aux_fields)
+        adjusted_record = {**record_core, "json": record_aux_fields}
 
         if self.writer is None:
-            self.writer = csv.DictWriter(self.f, fieldnames=columns)
+            self.writer = csv.DictWriter(
+                self.f,
+                fieldnames=adjusted_record.keys(),
+                quoting=csv.QUOTE_MINIMAL,
+            )
             self.writer.writeheader()
 
-        self.writer.writerow(record)
+        self.writer.writerow(adjusted_record)
         self.f.flush()
         log.debug(f"wrote {record} to {self.filepath}")
 

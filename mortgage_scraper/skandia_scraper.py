@@ -180,7 +180,6 @@ class SkandiaBankenScraper(AbstractScraper):
                     **asdict(segment),
                     **asdict(serialized),
                     **asdict(body),
-                    "bank": "skandia",
                 }
 
                 for s in self.sinks:
@@ -210,6 +209,7 @@ class SkandiaBankenScraper(AbstractScraper):
                     log.critical(
                         f"request was blocked, recovering via exponential backoff with used retries {self.retries}/5 possible"  # noqa
                     )
+                    # apply exponential backoff and add url to be retried down the line
                     self.retries = self.retries + 1
                     self.timeout = 2 * (2 ** (self.retries))
                     time.sleep(self.timeout)

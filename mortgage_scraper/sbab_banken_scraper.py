@@ -83,7 +83,6 @@ class SBABScraper(AbstractScraper):
                     **asdict(serialized),
                     **asdict(segment),
                     "period": serialized.Rantebindningstid,
-                    "bank": "sbab",
                 }
                 for sink in self.sinks:
                     sink.write(record)

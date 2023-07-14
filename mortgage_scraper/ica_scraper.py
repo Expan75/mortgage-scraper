@@ -137,7 +137,6 @@ class IcaBankenScraper(AbstractScraper):
                     "url": url,
                     **asdict(serialized),
                     **asdict(segment),
-                    "bank": "ica",
                 }
 
                 for s in self.sinks:

@@ -1,4 +1,5 @@
 import os
+import json
 import pathlib
 import argparse
 import pandas as pd
@@ -46,7 +47,6 @@ def harmonise(read_filepath: str, write_filepath: str, delimiter: str):
     # attach raw scrape body as json
     export_df.json = df.apply(lambda x: x.to_json(), axis=1)
     export_df.bank = read_filepath.split("/")[-1].split("_")[0]
-    export_df.ltv = df.loan_amount / df.asset_value
 
     df = df.rename(columns=column_map)
     for col in set(df.columns) & set(export_df.columns):

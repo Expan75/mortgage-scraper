@@ -115,7 +115,6 @@ class HypoteketScraper(AbstractScraper):
                         **asdict(segment),
                         **asdict(serialized_response),
                         "period": serialized_response.get_interest_term_period_months(),
-                        "bank": "hypoteket",
                     }
                     records.append(record)
 
