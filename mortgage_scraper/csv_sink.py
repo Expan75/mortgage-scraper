@@ -1,9 +1,7 @@
 import os
 import csv
-import json
 import logging
 import pathlib
-import operator
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 
