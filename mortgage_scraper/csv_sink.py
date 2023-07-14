@@ -59,7 +59,6 @@ class CSVSink(AbstractSink):
         # compress non-core columns into raw json string
         record_core = {k: v for k, v in record.items() if k in self.CORE_COLUMNS}
         record_aux_fields = {k: v for k, v in record.items() if k not in record_core}
-        print(record_aux_fields)
         adjusted_record = {**record_core, "json": record_aux_fields}
 
         if self.writer is None:
@@ -75,7 +74,7 @@ class CSVSink(AbstractSink):
         log.debug(f"wrote {record} to {self.filepath}")
 
     def close(self):
-        log.debug(f"export to {self.filepath} done, closing file...")
+        log.info(f"export to {self.filepath} done, closing file...")
         self.f.close()
 
     @classmethod

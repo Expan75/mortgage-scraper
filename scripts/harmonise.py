@@ -30,45 +30,31 @@ def harmonise(read_filepath: str, write_filepath: str, delimiter: str):
         # common fields for all
         "url": "url",
         "ltv": "ltv",
+        "offered_interest_rate": "offered_interest_rate",
         "asset_value": "asset_value",
         "loan_amount": "loan_amount",
         "period": "interest_term_months",
         "scraped_at": "scraped_time",
     }
 
-    df = pd.read_csv(read_filepath)
-    export_cols = [*set(column_map.values()), "json", "bank"]
-    export_df = pd.DataFrame(columns=export_cols)
-
-    # attach raw scrape body as json
-    export_df.json = df.apply(lambda x: x.to_json(), axis=1)
-    export_df.bank = read_filepath.split("/")[-1].split("_")[0]
-
-    df = df.rename(columns=column_map)
-    for col in set(df.columns) & set(export_df.columns):
-        export_df[col] = df[col].copy()
+    df = pd.read_csv(read_filepath).rename(columns=column_map)
 
     # apply misc. data cleaning and ordering
     column_order = list(
-        set(
-            [
-                "bank",
-                "offered_interest_rate",
-                "ltv",
-                "asset_value",
-                "loan_amount",
-                "interest_term_months",
-                "scraped_time",
-                "url",
-                "json",
-                *[c for c in sorted(export_df.columns)],
-            ]
-        )
+        [
+            "bank",
+            "offered_interest_rate",
+            "ltv",
+            "asset_value",
+            "loan_amount",
+            "interest_term_months",
+            "scraped_time",
+            "url",
+            "json",
+        ]
     )
-    # append ontooutput file
-    export_df[column_order].to_csv(
-        write_filepath, index=False, mode="a+", sep=delimiter
-    )
+
+    df[column_order].to_csv(write_filepath, index=False, mode="a+", sep=delimiter)
 
 
 if __name__ == "__main__":

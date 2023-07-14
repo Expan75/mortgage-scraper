@@ -88,7 +88,6 @@ class SBABScraper(AbstractScraper):
                 for sink in self.sinks:
                     sink.write(record)
 
-        log.info("scrape job for sbab finished, closing sinks")
         for s in self.sinks:
             s.close()
 

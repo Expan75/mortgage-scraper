@@ -146,7 +146,6 @@ class IcaBankenScraper(AbstractScraper):
             except requests.exceptions.JSONDecodeError:
                 log.critical(f"could not parse json, skipping {url=}")
 
-        log.info("finished scrape job")
         for s in self.sinks:
             s.close()
 
