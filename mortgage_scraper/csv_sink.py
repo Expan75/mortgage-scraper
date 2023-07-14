@@ -33,6 +33,7 @@ class CSVSink(AbstractSink):
     CORE_COLUMNS = set(
         [
             "url",
+            "offered_interest_rate",
             "asset_value",
             "loan_amount",
             "period",
@@ -45,7 +46,7 @@ class CSVSink(AbstractSink):
     def __init__(self, namespace: str, config: ScraperConfig):
         os.makedirs(self.data_dir, exist_ok=True)
 
-        self.namespace = str
+        self.namespace = namespace
         self.config: ScraperConfig = config
         self.filepath = self.get_export_filepath(namespace, config.ts_format)
 

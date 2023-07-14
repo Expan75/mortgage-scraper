@@ -106,15 +106,15 @@ class HypoteketScraper(AbstractScraper):
                 log.critical(f"Hypoteket requests yield {response.status_code}")
             try:
                 parsed = response.json()
-
                 records = []
                 for period in parsed:
-                    serialized_response = HypoteketResponse(**period)
+                    serialized = HypoteketResponse(**period)
                     record = {
                         "url": url,
                         **asdict(segment),
-                        **asdict(serialized_response),
-                        "period": serialized_response.get_interest_term_period_months(),
+                        **asdict(serialized),
+                        "period": serialized.get_interest_term_period_months(),
+                        "offered_interest_rate": serialized.rate,
                     }
                     records.append(record)
 

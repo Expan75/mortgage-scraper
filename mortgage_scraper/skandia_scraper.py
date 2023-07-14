@@ -180,6 +180,7 @@ class SkandiaBankenScraper(AbstractScraper):
                     **asdict(segment),
                     **asdict(serialized),
                     **asdict(body),
+                    "offered_interest_rate": serialized.EffectiveInterestRate,
                 }
 
                 for s in self.sinks:

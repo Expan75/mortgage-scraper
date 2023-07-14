@@ -23,6 +23,7 @@ EXPECTED_COLUMN_TYPES = {
     "scraped_at": lambda col: is_datetime64_any_dtype(
         pd.to_datetime(col, format=DEFAULT_TS_FORMAT)
     ),
+    "offered_interest_rate": is_numeric_dtype,
 }
 
 

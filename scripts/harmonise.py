@@ -34,10 +34,6 @@ def harmonise(read_filepath: str, write_filepath: str, delimiter: str):
         "loan_amount": "loan_amount",
         "period": "interest_term_months",
         "scraped_at": "scraped_time",
-        # specific terms provider wise
-        "offered_interest_rate": "offered_interest_rate",
-        "Rantesats": "offered_interest_rate",
-        "codeEffectiveInterestRate": "offered_interest_rate",
     }
 
     df = pd.read_csv(read_filepath)
@@ -57,11 +53,13 @@ def harmonise(read_filepath: str, write_filepath: str, delimiter: str):
         set(
             [
                 "bank",
-                "scraped_time",
+                "offered_interest_rate",
                 "ltv",
                 "asset_value",
                 "loan_amount",
                 "interest_term_months",
+                "scraped_time",
+                "url",
                 "json",
                 *[c for c in sorted(export_df.columns)],
             ]
