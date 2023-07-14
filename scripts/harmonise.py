@@ -62,6 +62,7 @@ def harmonise(read_filepath: str, write_filepath: str, delimiter: str):
                 "asset_value",
                 "loan_amount",
                 "interest_term_months",
+                "json",
                 *[c for c in sorted(export_df.columns)],
             ]
         )
